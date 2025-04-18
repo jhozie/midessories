@@ -1,5 +1,5 @@
 import { Product } from "@/types/product";
-
+import { Category } from "@/types/category";
 export function generateSlug(name: string) {
   return name
     .toLowerCase()
@@ -15,6 +15,10 @@ export function generateSEOUrl(product: Product) {
     .replace(/^-|-$/g, '');
     
   return `/product/${cleanName}-${product.id}`;
+}
+
+export function generateCategorySEOUrl(category: Category) {
+  return `/category/${category.slug}`;
 }
 
 export function formatNaira(amount: number) {

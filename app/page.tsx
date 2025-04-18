@@ -6,10 +6,13 @@ import Link from "next/link";
 import { ArrowRight, ShoppingBag, Star, Heart, TrendingUp, Package, Sparkles } from "lucide-react";
 import { getProducts } from '@/lib/firebase';
 import { Product } from '@/types/product';
-import { generateSlug, generateSEOUrl, formatNaira } from '@/lib/utils';
+import { generateSlug, generateSEOUrl, formatNaira, generateCategorySEOUrl } from '@/lib/utils';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { Category } from '@/types/category';
+import { useRouter } from 'next/navigation';
+import { auth } from '@/lib/firebase';
+import { getDoc, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 
 export default function Home() {
   const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
@@ -21,6 +24,8 @@ export default function Home() {
     image: string;
     count: number;
   }[]>([]);
+  const [wishlist, setWishlist] = useState<string[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchTrendingProducts() {
@@ -66,9 +71,60 @@ export default function Home() {
       }
     }
 
+    // Add this function to check wishlist
+    const checkWishlist = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setWishlist(userData.wishlist?.map((item: { productId: string }) => item.productId) || []);
+        }
+      } catch (error) {
+        console.error('Error checking wishlist:', error);
+      }
+    };
+
     fetchTrendingProducts();
     fetchCategories();
+    checkWishlist();
   }, []);
+
+  // Add toggle wishlist function
+  const toggleWishlist = async (e: React.MouseEvent, productId: string) => {
+    e.preventDefault(); // Prevent navigation to product page
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+
+      const userRef = doc(db, 'users', user.uid);
+      const wishlistItem = {
+        productId,
+        dateAdded: new Date()
+      };
+
+      const isInWishlist = wishlist.includes(productId);
+
+      await updateDoc(userRef, {
+        wishlist: isInWishlist
+          ? arrayRemove(wishlistItem)
+          : arrayUnion(wishlistItem)
+      });
+
+      setWishlist(prev => 
+        isInWishlist 
+          ? prev.filter(id => id !== productId)
+          : [...prev, productId]
+      );
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -250,24 +306,37 @@ export default function Home() {
                       className="object-cover transform group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <button className="absolute bottom-3 right-3 bg-white text-black p-2.5 rounded-full shadow-lg translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                      <ShoppingBag size={16} />
-                    </button>
+                    {/* Action Buttons */}
+                    <div className="absolute bottom-3 right-3 flex gap-2">
+                      <button 
+                        onClick={(e) => toggleWishlist(e, product.id)}
+                        className={`bg-white p-2.5 rounded-full shadow-lg translate-y-full opacity-0 
+                                  group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 
+                                  hover:bg-pink-50 ${wishlist.includes(product.id) ? 'text-pink-500' : 'text-gray-500'}`}
+                      >
+                        <Heart className={`w-4 h-4 ${wishlist.includes(product.id) ? 'fill-pink-500' : ''}`} />
+                      </button>
+                      <button 
+                        className="bg-white text-black p-2.5 rounded-full shadow-lg translate-y-full opacity-0 
+                                 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 delay-75
+                                 hover:bg-pink-50"
+                      >
+                        <ShoppingBag size={16} />
+                      </button>
+                    </div>
                   </div>
                   
-                  {/* Product info - updated to use categoryName */}
+                  {/* Product info */}
                   <div className="space-y-2 px-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-medium group-hover:text-pink-500 transition-colors">
                         {product.name}
                       </h3>
-                      {product.status === 'active' && (
-                        <span className="px-2 py-0.5 bg-pink-50 text-pink-500 text-xs font-medium rounded-full">
-                          New
-                        </span>
-                      )}
+                      <span className="px-2 py-0.5 bg-pink-50 text-pink-500 text-xs font-medium rounded-full">
+                        {product.status === 'active' ? 'New' : product.categoryName || product.category}
+                      </span>
                     </div>
-                    <p className="text-gray-500 text-xs">{product.categoryName || product.category}</p>
+                    <p className="text-gray-500 text-xs">{product.description?.substring(0, 60)}...</p>
                     <div className="flex items-center justify-between">
                       <p className="text-base font-semibold">
                         {formatNaira(product.price)}
@@ -296,7 +365,7 @@ export default function Home() {
             {categories.map((category) => (
               <Link 
                 key={category.id}
-                href={`/shop?category=${category.id}`}
+                href={`/category/${category.name.toLowerCase().replace(/\s+/g, '-')}`}
                 className="group relative overflow-hidden rounded-2xl"
               >
                 <div className="aspect-square relative">

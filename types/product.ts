@@ -6,6 +6,7 @@ export interface Product {
   compareAtPrice?: number; // Original price for showing discounts
   images: string[];
   category: string;
+  categoryName?: string;
   subcategory?: string;
   stock: number;
   sku: string; // Stock Keeping Unit
