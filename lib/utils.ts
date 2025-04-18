@@ -1,3 +1,5 @@
+import { Product } from "@/types/product";
+
 export function generateSlug(name: string) {
   return name
     .toLowerCase()
