@@ -6,7 +6,7 @@ export interface Review {
   rating: number;
   title: string;
   comment: string;
-  images?: string[];
+  images: string[];
   status: 'pending' | 'approved' | 'rejected';
   helpful: number;
   response?: {
@@ -15,4 +15,11 @@ export interface Review {
   };
   createdAt: Date;
   updatedAt: Date;
+  likes: number;
+  user: {
+    name: string;
+    avatar?: string;
+  };
+  date: string;
+  verified: boolean;
 } 

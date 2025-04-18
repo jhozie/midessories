@@ -33,7 +33,11 @@ const mockReviews: Review[] = [
     status: 'approved' as const,
     helpful: 12,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    likes: 0,
+    user: { name: 'Sarah Johnson' },
+    date: new Date().toLocaleDateString(),
+    verified: true
   },
   {
     id: '2',
@@ -47,7 +51,11 @@ const mockReviews: Review[] = [
     status: 'approved' as const,
     helpful: 8,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    likes: 0,
+    user: { name: 'Mike Chen' },
+    date: new Date().toLocaleDateString(),
+    verified: true
   }
 ];
 
@@ -178,7 +186,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
         updatedAt: new Date()
       };
 
-      const savedReview = await addProductReview(newReview);
+      const savedReview = await addProductReview(newReview as Review);
       setReviews(prevReviews => [savedReview as Review, ...prevReviews]);
       setIsReviewFormOpen(false);
     } catch (error) {

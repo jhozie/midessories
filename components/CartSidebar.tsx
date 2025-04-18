@@ -2,7 +2,8 @@
 
 import { X, Minus, Plus, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
-import { useCart, CartItem } from '@/contexts/CartContext';
+import { useCart } from '@/contexts/CartContext';
+import type { CartItem } from '@/contexts/CartContext';
 import Link from 'next/link';
 import { formatNaira } from '@/lib/utils';
 
