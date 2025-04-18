@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { ArrowRight, ChevronLeft, ChevronRight, Filter, Grid3X3, List, ShoppingBag, Star, Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -23,7 +23,8 @@ interface Product {
   };
 }
 
-export default function ShopPage() {
+// Create a client component that uses useSearchParams
+function ShopContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
@@ -253,5 +254,27 @@ export default function ShopPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function ShopPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen pt-32 pb-20">
+        <div className="container mx-auto px-4">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 w-48 rounded mb-8" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-80 bg-gray-200 rounded-2xl" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    }>
+      <ShopContent />
+    </Suspense>
   );
 } 
