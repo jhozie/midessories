@@ -1,26 +1,96 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
+  /* Modern, sophisticated color palette */
   --background: #ffffff;
   --foreground: #171717;
+  --primary: #FF1493;  /* Hot pink */
+  --primary-light: #FFB6C1;
+  --primary-hover: #FF69B4; /* Slightly darker pink for hover */
+  --primary-focus: #FFB6C1; /* Light pink for focus */
+  --secondary: #FFF9FB;  /* Very light pink */
+  --accent: #FF1493;
+  --muted: #64748B;
+  --border: #E2E8F0;
+  --surface: #FFFFFF;
+  
+  /* Additional colors */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans tracking-tight font-bold;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg 
+           font-medium transition-all duration-200 shadow-sm 
+           hover:shadow-md hover:scale-[1.02] active:scale-100;
+  }
+
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 text-foreground px-6 py-3 rounded-lg 
+           border border-border font-medium transition-all duration-200
+           hover:shadow-sm active:bg-gray-100;
+  }
+
+  .card {
+    @apply bg-surface rounded-xl border border-border p-6 
+           transition-all duration-200 hover:shadow-lg hover:border-primary-light;
+  }
+
+  .input {
+    @apply w-full px-4 py-2 rounded-lg border border-border bg-white
+           focus:outline-none focus:ring-2 focus:ring-primary-focus
+           focus:border-primary transition-all duration-200;
+  }
+
+  .container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Modern animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes fade-up {
+  0% { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale {
+  0% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s ease-out forwards;
+}
+
+.animate-scale {
+  animation: scale 0.3s ease-out forwards;
 }
