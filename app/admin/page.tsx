@@ -14,6 +14,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+interface Order {
+  id: string;
+  amount: number;
+  status: string;
+  createdAt: any; // or proper Timestamp type
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
     totalOrders: 0,
@@ -21,7 +28,7 @@ export default function AdminDashboard() {
     totalCustomers: 0,
     totalRevenue: 0,
   });
-  const [recentOrders, setRecentOrders] = useState([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,10 +39,15 @@ export default function AdminDashboard() {
           query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(5))
         );
         
-        const orders = ordersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const orders = ordersSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            amount: data.amount || 0,
+            status: data.status || 'pending',
+            createdAt: data.createdAt
+          } as Order;
+        });
         
         setRecentOrders(orders);
 

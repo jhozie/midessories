@@ -17,6 +17,7 @@ import { Product } from '@/types/product';
 import { generateSlug, formatNaira } from '@/lib/utils';
 import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { uploadToImgBB } from '@/lib/upload';
 
 // Add mock reviews data
 const mockReviews: Review[] = [
@@ -160,8 +161,17 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
     images: File[];
   }) => {
     try {
+      // Upload images first and get URLs
+      const imageUrls = await Promise.all(
+        reviewData.images.map(file => uploadToImgBB(file))
+      );
+
       const newReview = {
         ...reviewData,
+        images: imageUrls, // Use uploaded image URLs
+        productId,
+        customerId: auth.currentUser?.uid || '',
+        customerName: auth.currentUser?.displayName || 'Anonymous',
         status: 'pending' as const,
         helpful: 0,
         createdAt: new Date(),
@@ -169,7 +179,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       };
 
       const savedReview = await addProductReview(newReview);
-      setReviews(prevReviews => [savedReview, ...prevReviews]);
+      setReviews(prevReviews => [savedReview as Review, ...prevReviews]);
       setIsReviewFormOpen(false);
     } catch (error) {
       console.error('Error submitting review:', error);
