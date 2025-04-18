@@ -25,15 +25,16 @@ const shouldInitialize =
 // Initialize Firebase conditionally
 const app = shouldInitialize 
   ? (getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0])
-  : null;
+  : undefined;
 
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+// Initialize services only if app is defined
+const auth = app ? getAuth(app) : getAuth();
+const db = app ? getFirestore(app) : getFirestore();
+const storage = app ? getStorage(app) : getStorage();
 
 // Initialize Analytics only on client side
 let analytics = null;
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && app) {
   analytics = getAnalytics(app);
 }
 
@@ -45,6 +46,8 @@ export async function getProducts(options: {
   orderDirection?: 'asc' | 'desc';
 } = {}) {
   try {
+    if (!db) return [];
+    
     const productsRef = collection(db, 'products');
     const constraints = [];
     
@@ -85,6 +88,8 @@ export async function getProducts(options: {
 
 export async function getProduct(productId: string) {
   try {
+    if (!db) return null;
+    
     const docRef = doc(db, 'products', productId);
     const docSnap = await getDoc(docRef);
     
@@ -104,6 +109,8 @@ export async function getProduct(productId: string) {
 
 export async function getProductReviews(productId: string, limitCount: number = 5) {
   try {
+    if (!db) return [];
+    
     const q = query(
       collection(db, 'reviews'),
       where('productId', '==', productId),
@@ -124,6 +131,8 @@ export async function getProductReviews(productId: string, limitCount: number = 
 
 export async function addProductReview(review: Omit<Review, 'id' | 'createdAt' | 'updatedAt'>) {
   try {
+    if (!db) throw new Error("Firestore not initialized");
+    
     const reviewData = {
       ...review,
       status: 'pending',
@@ -142,6 +151,8 @@ export async function addProductReview(review: Omit<Review, 'id' | 'createdAt' |
 
 export async function getRelatedProducts(productId: string, category: string, limitCount = 4) {
   try {
+    if (!db) return [];
+    
     const q = query(
       collection(db, 'products'),
       where('category', '==', category),
