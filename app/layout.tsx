@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Midecessories - Fashion & Accessories",
+  title: "Midessories - Fashion & Accessories",
   description: "Modern fashion and accessories for the stylish you",
 };
 

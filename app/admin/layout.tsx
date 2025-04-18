@@ -54,7 +54,7 @@ export default function AdminLayout({
       {/* Admin Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-100">
         <div className="p-6 border-b border-gray-100">
-          <Link href="/" className="text-xl font-bold">MIDECESSORIES</Link>
+          <Link href="/" className="text-xl font-bold">Midessories</Link>
         </div>
         <div className="p-6">
           <div className="flex items-center gap-3 mb-6">

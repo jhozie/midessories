@@ -16,6 +16,7 @@ interface Product {
   price: number;
   images: string[];
   category: string;
+  categoryName?: string;
   status: string;
   ratings: {
     average: number;
@@ -217,15 +218,15 @@ function ShopContent() {
                     {product.name}
                   </h3>
                   <span className="px-2 py-0.5 bg-pink-50 text-pink-500 text-xs font-medium rounded-full">
-                    {product.category}
+                    {product.categoryName || product.category}
                   </span>
                 </div>
-                <p className="text-gray-500 text-xs">{product.description}</p>
+                <p className="text-gray-500 text-xs">{product.description.substring(0, 60)}...</p>
                 <div className="flex items-center justify-between">
-                  <p className="text-base font-semibold">${product.price}</p>
+                  <p className="text-base font-semibold">{formatNaira(product.price)}</p>
                   <div className="flex items-center gap-1">
                     <Star size={12} className="text-pink-500 fill-pink-500" />
-                    <span className="text-xs text-gray-600">4.9</span>
+                    <span className="text-xs text-gray-600">{product.ratings.average.toFixed(1)}</span>
                   </div>
                 </div>
               </div>

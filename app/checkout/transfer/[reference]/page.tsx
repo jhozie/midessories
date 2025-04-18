@@ -70,10 +70,10 @@ export default function TransferConfirmationPage({ params }: { params: { referen
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-500">Account Name</p>
-                      <p className="font-medium">MIDECESSORIES LTD</p>
+                      <p className="font-medium">Midessories LTD</p>
                     </div>
                     <button
-                      onClick={() => copyToClipboard('MIDECESSORIES LTD')}
+                      onClick={() => copyToClipboard('Midessories LTD')}
                       className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                       <Copy className="w-4 h-4 text-gray-400" />

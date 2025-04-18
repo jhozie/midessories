@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           <div>
             <h3 className="font-bold text-xl bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent mb-6">
-              MIDECESSORIES
+              MIDESSORIES
             </h3>
             <p className="text-gray-600 text-sm">
               Elevating your style with modern accessories. Quality products that make a statement in 2025 and beyond.
@@ -68,7 +68,7 @@ export default function Footer() {
         </div>
         
         <div className="border-t border-gray-100 mt-16 pt-8 text-center text-gray-500 text-sm">
-          <p>&copy; 2025 Midecessories. All rights reserved.</p>
+          <p>&copy; 2025 Midessories. All rights reserved.</p>
         </div>
       </div>
     </footer>

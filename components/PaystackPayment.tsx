@@ -50,7 +50,7 @@ export default function PaystackPayment({
         ref: reference,
         currency: 'NGN',
         channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
-        label: 'MIDECESSORIES LTD',
+        label: 'Midessories LTD',
         onClose: () => {
           router.push(`/checkout/failed/${reference}`);
           onClose();

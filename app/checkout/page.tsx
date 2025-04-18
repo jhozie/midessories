@@ -793,7 +793,7 @@ export default function CheckoutPage() {
                     </div>
                     <div className="p-4 bg-white rounded-lg">
                       <p className="text-sm text-gray-500">Account Name</p>
-                      <p className="font-medium mt-1">MIDECESSORIES LTD</p>
+                      <p className="font-medium mt-1">Midessories LTD</p>
                     </div>
                     <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg text-blue-600">
                       <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />

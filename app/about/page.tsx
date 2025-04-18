@@ -29,7 +29,7 @@ export default function AboutPage() {
             <span className="inline-block bg-pink-500 text-white px-4 py-1 rounded-full text-sm font-medium mb-6">
               Est. 2023
             </span>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">About MIDECESSORIES</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">About Midessories</h1>
             <p className="text-gray-600 text-lg md:text-xl">
               Crafting premium accessories that blend style with functionality. 
               Our mission is to help you express your unique personality through carefully designed pieces.
@@ -60,7 +60,7 @@ export default function AboutPage() {
               <div className="w-20 h-1 bg-pink-500 rounded-full mb-6" />
               <div className="space-y-4">
                 <p className="text-gray-600">
-                  Founded in 2023, MIDECESSORIES began with a simple vision: to create accessories 
+                  Founded in 2023, Midessories began with a simple vision: to create accessories 
                   that make a statement. We noticed a gap in the market for high-quality, 
                   design-focused accessories that truly reflect individual style.
                 </p>
@@ -133,7 +133,7 @@ export default function AboutPage() {
                   <Mail className="w-8 h-8 text-pink-500" />
                 </div>
                 <h3 className="font-bold text-lg mb-2">Email Us</h3>
-                <p className="text-gray-600">hello@midecessories.com</p>
+                <p className="text-gray-600">hello@Midessories.com</p>
               </div>
             </div>
           </div>

@@ -7,12 +7,17 @@ import { ArrowRight, ShoppingBag, Star, Heart, TrendingUp, Package, Sparkles } f
 import { getProducts } from '@/lib/firebase';
 import { Product } from '@/types/product';
 import { generateSlug, generateSEOUrl, formatNaira } from '@/lib/utils';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { Category } from '@/types/category';
 
 export default function Home() {
   const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<{
+    id: string;
     name: string;
+    description: string;
     image: string;
     count: number;
   }[]>([]);
@@ -30,17 +35,35 @@ export default function Home() {
     }
 
     async function fetchCategories() {
-      const products = await getProducts();
-      const categoryCounts = products.reduce((acc, product) => {
-        acc[product.category] = (acc[product.category] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      setCategories(Object.entries(categoryCounts).map(([name, count]) => ({
-        name,
-        image: '/phonecase.jpg', // You might want to store category images separately
-        count: count
-      })));
+      try {
+        // Fetch categories from the categories collection
+        const q = query(collection(db, 'categories'), orderBy('order'));
+        const snapshot = await getDocs(q);
+        const categoriesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Category[];
+        
+        // Fetch products to count items per category
+        const products = await getProducts();
+        const categoryCounts = products.reduce((acc, product) => {
+          acc[product.category] = (acc[product.category] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        // Combine category data with counts
+        const categoriesWithCounts = categoriesData.map(category => ({
+          id: category.id,
+          name: category.name,
+          description: category.description || '',
+          image: '/phonecase.jpg', // Default image if none is provided
+          count: categoryCounts[category.id] || 0
+        }));
+        
+        setCategories(categoriesWithCounts);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
     }
 
     fetchTrendingProducts();
@@ -189,29 +212,23 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Products */}
-      <section className="py-16">
+      {/* Trending Products section */}
+      <section className="py-24">
         <div className="container mx-auto px-4">
-          {/* Section header */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+          <div className="flex items-center justify-between mb-12">
             <div>
-              <h2 className="text-3xl font-bold mb-2">Featured Products</h2>
-              <p className="text-gray-600 max-w-lg">Discover our most sought-after accessories, carefully curated for the modern lifestyle.</p>
+              <h2 className="text-3xl font-bold mb-2">Trending Products</h2>
+              <p className="text-gray-600">Our most popular products based on sales</p>
             </div>
-            <Link 
-              href="/shop" 
-              className="group flex items-center gap-2 text-pink-500 hover:text-pink-600 font-medium"
-            >
-              Browse All Products 
-              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            <Link href="/shop" className="flex items-center gap-2 text-pink-500 font-medium hover:text-pink-600 transition-colors">
+              View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          
-          {/* Product grid */}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {loading ? (
-              // Add loading skeletons here
-              Array(4).fill(0).map((_, i) => (
+              // Loading skeletons remain the same
+              Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="animate-pulse">
                   <div className="bg-gray-200 rounded-xl aspect-square mb-3" />
                   <div className="space-y-2 px-1">
@@ -237,7 +254,8 @@ export default function Home() {
                       <ShoppingBag size={16} />
                     </button>
                   </div>
-                  {/* Product info */}
+                  
+                  {/* Product info - updated to use categoryName */}
                   <div className="space-y-2 px-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-medium group-hover:text-pink-500 transition-colors">
@@ -249,7 +267,7 @@ export default function Home() {
                         </span>
                       )}
                     </div>
-                    <p className="text-gray-500 text-xs">{product.category}</p>
+                    <p className="text-gray-500 text-xs">{product.categoryName || product.category}</p>
                     <div className="flex items-center justify-between">
                       <p className="text-base font-semibold">
                         {formatNaira(product.price)}
@@ -277,8 +295,8 @@ export default function Home() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {categories.map((category) => (
               <Link 
-                key={category.name}
-                href={`/category/${category.name.toLowerCase().replace(' ', '-')}`}
+                key={category.id}
+                href={`/shop?category=${category.id}`}
                 className="group relative overflow-hidden rounded-2xl"
               >
                 <div className="aspect-square relative">

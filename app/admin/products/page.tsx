@@ -149,6 +149,9 @@ export default function ProductsPage() {
         imageFiles.map(file => uploadToImgBB(file))
       );
 
+      const selectedCategory = categories.find(cat => cat.id === formData.category);
+      const categoryName = selectedCategory ? selectedCategory.name : '';
+
       const productData = {
         ...formData,
         price: parseFloat(formData.price),
@@ -160,6 +163,7 @@ export default function ProductsPage() {
           stock: parseInt(formData.stock),
           sku: formData.sku,
         }) || {}),
+        categoryName: categoryName,
         shipping: {
           ...formData.shipping,
           weight: parseFloat(formData.shipping.weight),
