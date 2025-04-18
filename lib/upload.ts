@@ -8,6 +8,10 @@ export async function uploadToImgBB(file: File): Promise<string> {
     body: formData
   });
 
+  if (!response.ok) {
+    throw new Error('Failed to upload image');
+  }
+
   const data = await response.json();
   return data.data.url;
 } 
