@@ -160,16 +160,9 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
     images: File[];
   }) => {
     try {
-      const newReview: Review = {
-        id: 'temp-' + Date.now(), // Will be replaced by Firestore
-        productId: productId,
-        customerId: 'user-id', // Replace with actual user ID
-        customerName: 'Customer Name', // Replace with actual name
-        rating: reviewData.rating,
-        title: reviewData.title,
-        comment: reviewData.comment,
-        images: [], // Handle image upload separately
-        status: 'pending' as const, // Fix: explicitly type as 'pending'
+      const newReview = {
+        ...reviewData,
+        status: 'pending' as const,
         helpful: 0,
         createdAt: new Date(),
         updatedAt: new Date()
