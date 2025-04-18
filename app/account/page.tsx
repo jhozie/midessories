@@ -219,7 +219,9 @@ export default function AccountPage() {
       if (editingAddress) {
         // Update existing address
         const updatedAddresses = userData?.addresses?.map(addr => 
-          addr.id === editingAddress.id ? { ...addressData, id: addr.id } : addr
+          addr.id === editingAddress.id 
+            ? { ...addressData, id: addr.id, createdAt: addr.createdAt } 
+            : addr
         ) || [];
         
         await updateDoc(doc(db, 'users', user.uid), {
@@ -232,7 +234,8 @@ export default function AccountPage() {
         const newAddress = {
           ...addressData,
           id: 'addr_' + Date.now(),
-          isDefault: !userData?.addresses?.length
+          isDefault: !userData?.addresses?.length,
+          createdAt: new Date()
         };
         
         const updatedAddresses = [...(userData?.addresses || []), newAddress];
