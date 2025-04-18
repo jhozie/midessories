@@ -6,12 +6,15 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Product } from '@/types/product';
-import { products } from '@/data/products';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query as firebaseQuery, where, orderBy, limit } from 'firebase/firestore';
+import { generateSlug, formatNaira } from '@/lib/utils';
 
 export default function Search() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -29,17 +32,39 @@ export default function Search() {
 
   // Handle search
   useEffect(() => {
-    if (query.length > 1) {
-      const searchResults = products.filter(product => 
-        product.name.toLowerCase().includes(query.toLowerCase()) ||
-        product.description.toLowerCase().includes(query.toLowerCase()) ||
-        product.category.toLowerCase().includes(query.toLowerCase()) ||
-        product.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
-      );
-      setResults(searchResults);
-    } else {
-      setResults([]);
-    }
+    const searchProducts = async () => {
+      if (query.length > 1) {
+        setLoading(true);
+        try {
+          const productsRef = collection(db, 'products');
+          const productsSnapshot = await getDocs(
+            firebaseQuery(productsRef, where('status', '==', 'active'), limit(10))
+          );
+          
+          const allProducts = productsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Product[];
+          
+          // Filter products client-side
+          const filtered = allProducts.filter(product => 
+            product.name.toLowerCase().includes(query.toLowerCase()) ||
+            product.description.toLowerCase().includes(query.toLowerCase()) ||
+            product.category.toLowerCase().includes(query.toLowerCase())
+          );
+          
+          setResults(filtered);
+        } catch (error) {
+          console.error('Error searching products:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setResults([]);
+      }
+    };
+
+    searchProducts();
   }, [query]);
 
   // Handle keyboard shortcuts
@@ -110,13 +135,20 @@ export default function Search() {
               </div>
             </form>
 
+            {/* Loading State */}
+            {loading && (
+              <div className="p-8 text-center">
+                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-pink-500"></div>
+              </div>
+            )}
+
             {/* Search Results */}
-            {results.length > 0 && (
+            {!loading && results.length > 0 && (
               <div className="max-h-[60vh] overflow-auto p-2">
                 {results.map((product) => (
                   <Link
                     key={product.id}
-                    href={`/product/${product.id}`}
+                    href={`/product/${generateSlug(product.name)}-${product.id}`}
                     onClick={() => {
                       setIsOpen(false);
                       setQuery('');
@@ -135,7 +167,7 @@ export default function Search() {
                       <h3 className="font-medium text-gray-900">{product.name}</h3>
                       <p className="text-sm text-gray-500">{product.category}</p>
                       <p className="text-sm font-medium text-pink-500">
-                        ${product.price}
+                        {formatNaira(product.price)}
                       </p>
                     </div>
                   </Link>
@@ -144,14 +176,14 @@ export default function Search() {
             )}
 
             {/* No Results */}
-            {query.length > 1 && results.length === 0 && (
+            {!loading && query.length > 1 && results.length === 0 && (
               <div className="p-8 text-center text-gray-500">
                 No results found for "{query}"
               </div>
             )}
 
             {/* Quick Links */}
-            {query.length <= 1 && (
+            {query.length <= 1 && !loading && (
               <div className="p-4 border-t border-gray-100">
                 <h3 className="text-xs font-medium text-gray-400 mb-2">QUICK LINKS</h3>
                 <div className="grid grid-cols-2 gap-2">
