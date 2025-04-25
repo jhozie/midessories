@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { triggerAbandonedCartEmail } from '@/lib/emailTriggers';
 
 // This endpoint should be called by a cron job service (like Vercel Cron)
@@ -29,8 +29,9 @@ export async function GET() {
       if (!cart.userId) continue;
       
       // Get user data
-      const userDoc = await db.collection('users').doc(cart.userId).get();
-      if (!userDoc.exists) continue;
+      const userRef = doc(db, 'users', cart.userId);
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) continue;
       
       const user = userDoc.data();
       
@@ -38,7 +39,7 @@ export async function GET() {
       await triggerAbandonedCartEmail(user, cart.items);
       
       // Mark email as sent
-      await db.collection('carts').doc(cartDoc.id).update({
+      await updateDoc(doc(db, 'carts', cartDoc.id), {
         emailSent: true
       });
       
