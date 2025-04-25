@@ -38,7 +38,7 @@ export default function Header() {
         isScrolled ? 'bg-white/95 backdrop-blur-sm shadow-sm' : 'bg-white'
       }`}>
         {/* Announcement bar */}
-        <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white py-2 text-center text-sm font-medium">
+        <div className="bg-[#DA0988] text-white py-2 text-center text-sm font-medium">
           New arrivals just dropped! Shop the latest collection today
         </div>
         

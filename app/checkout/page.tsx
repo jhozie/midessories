@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { triggerOrderConfirmationEmail } from '@/lib/emailTriggers';
 
 type ShippingMethod = 'standard' | 'express';
 type PaymentMethod = 'paystack' | 'transfer';
@@ -276,38 +277,72 @@ export default function CheckoutPage() {
         }
       }
 
-      // Create order object
-      const orderData: Order = {
+      // Create order data
+      const orderData = {
         id: reference,
-        status: 'pending',
-        reference: reference,
         amount: finalTotal,
-        items,
-        userId: userId, // Add user ID if account was created
+        customerEmail: data.email,
+        customerPhone: data.phone,
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image
+        })),
         shipping: {
-          method: shippingMethod,
-          cost: shippingCost,
           address: {
             firstName: data.firstName,
             lastName: data.lastName,
             address: data.address,
             city: data.city,
             state: data.state,
-            additionalInfo: data.additionalInfo,
+            additionalInfo: data.additionalInfo
           },
+          cost: shippingCost,
+          location: shippingLocations[shippingMethod],
+          method: shippingMethod,
+          status: 'pending'
         },
+        status: 'pending' as OrderStatus,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        userId: userId,
         payment: {
           method: paymentMethod,
-          status: 'pending',
-        },
-        createdAt: new Date(),
+          status: (paymentMethod === 'transfer' ? 'pending' : 'processing') as 'pending' | 'completed',
+          reference: reference
+        }
       };
 
       // Save order to Firestore
       await setDoc(doc(db, 'orders', reference), orderData);
 
+      // Store order data in localStorage for email sending
+      localStorage.setItem('lastOrder', JSON.stringify({
+        ...orderData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+
+      // Store user data if they created an account
+      if (data.createAccount) {
+        localStorage.setItem('userData', JSON.stringify({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email
+        }));
+      }
+
       // Set order in state and continue with payment
-      setOrder(orderData);
+      setOrder({
+        ...orderData,
+        reference: reference,
+        payment: {
+          ...orderData.payment,
+          status: orderData.payment.status as 'pending' | 'completed'
+        }
+      });
       setOrderReference(reference);
 
       if (paymentMethod === 'paystack') {

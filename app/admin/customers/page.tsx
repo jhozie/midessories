@@ -29,12 +29,14 @@ import {
   doc,
   query,
   orderBy,
-  where
+  where,
+  addDoc
 } from 'firebase/firestore';
 import { Customer } from '@/types/customer';
 import { STATUS_COLORS, STATUS_ICONS } from '@/utils/constants';
 import { Order } from '@/types/order';
 import React from 'react';
+import { triggerWelcomeEmail } from '@/lib/emailTriggers';
 
 type CustomerTab = 'details' | 'orders' | 'addresses' | 'notes';
 
@@ -62,12 +64,26 @@ export default function CustomersPage() {
 
   async function fetchCustomers() {
     try {
-      const q = query(collection(db, 'customers'), orderBy('createdAt', 'desc'));
+      const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      const customersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Customer[];
+      const customersData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          status: data.status || 'active',
+          orders: data.orders || [],
+          addresses: data.addresses || [],
+          tags: data.tags || [],
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          totalSpent: data.totalSpent || 0,
+          lastPurchase: data.lastPurchase?.toDate() || null,
+        } as Customer;
+      });
       setCustomers(customersData);
 
       const ordersSnapshot = await getDocs(collection(db, 'orders'));
@@ -85,7 +101,7 @@ export default function CustomersPage() {
 
   async function updateCustomerStatus(customerId: string, status: Customer['status']) {
     try {
-      await updateDoc(doc(db, 'customers', customerId), {
+      await updateDoc(doc(db, 'users', customerId), {
         status,
         updatedAt: new Date()
       });
@@ -104,7 +120,7 @@ export default function CustomersPage() {
     tags: string[];
   }) {
     try {
-      await updateDoc(doc(db, 'customers', customerId), {
+      await updateDoc(doc(db, 'users', customerId), {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
@@ -121,6 +137,38 @@ export default function CustomersPage() {
     } catch (error) {
       console.error('Error updating customer:', error);
       alert('Error updating customer');
+    }
+  }
+
+  async function createCustomer(customerData) {
+    try {
+      // Create the customer in the users collection
+      const docRef = await addDoc(collection(db, 'users'), {
+        ...customerData,
+        status: 'active',
+        orders: [],
+        addresses: [],
+        tags: [],
+        totalSpent: 0,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      // Send welcome email
+      await triggerWelcomeEmail({
+        firstName: customerData.firstName,
+        email: customerData.email
+      });
+
+      // Refresh customers list
+      fetchCustomers();
+      
+      // Close modal and reset form
+      setIsModalOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      alert('Error creating customer');
     }
   }
 

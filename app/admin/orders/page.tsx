@@ -26,11 +26,19 @@ import {
   query,
   orderBy,
   where,
-  addDoc
+  addDoc,
+  getDoc
 } from 'firebase/firestore';
 import { Order } from '@/types/order';
 import React from 'react';
 import { STATUS_COLORS, STATUS_ICONS } from '@/utils/constants';
+import { 
+  triggerShippingConfirmationEmail, 
+  triggerOrderDeliveredEmail,
+  triggerOrderCanceledEmail,
+  triggerRefundEmail,
+  triggerOrderConfirmationEmail
+} from '@/lib/emailTriggers';
 
 interface RefundData {
   amount: number;
@@ -43,6 +51,13 @@ interface Message {
   text: string;
   sender: 'admin' | 'customer';
   createdAt: Date;
+}
+
+interface TrackingInfo {
+  trackingNumber: string;
+  carrier: string;
+  estimatedDelivery: string;
+  trackingUrl: string;
 }
 
 export default function OrdersPage() {
@@ -100,6 +115,7 @@ export default function OrdersPage() {
         } as Order;
       });
       setOrders(ordersData);
+      console.log('Fetched orders with emails:', ordersData.map(o => o.customerEmail));
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -107,21 +123,261 @@ export default function OrdersPage() {
     }
   }
 
+  async function updateOrderStatus(orderId: string, newStatus: Order['status']) {
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      
+      // Update the order status in Firestore
+      await updateDoc(orderRef, {
+        status: newStatus,
+        updatedAt: new Date()
+      });
+
+      // If we have a selected order, update it in state
+      if (selectedOrder && selectedOrder.id === orderId) {
+        const updatedOrder = { ...selectedOrder, status: newStatus };
+        setSelectedOrder(updatedOrder);
+        
+        // Prepare user data for email with fallback
+        const userEmail = updatedOrder.customerEmail || 'missing@email.com';
+        console.log('Customer email:', userEmail); // Debug log
+        
+        const user = {
+          email: userEmail,
+          firstName: updatedOrder.shipping.address.firstName || 'Customer',
+          lastName: updatedOrder.shipping.address.lastName || ''
+        };
+
+        // Send appropriate email based on new status
+        if (newStatus === 'shipped') {
+          // Create tracking info
+          const trackingNumber = `TRK${Math.floor(Math.random() * 1000000)}`;
+          
+          // Create tracking info using the pre-defined number
+          const trackingInfo: TrackingInfo = {
+            trackingNumber,
+            carrier: 'Midessories Delivery',
+            estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+            trackingUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/track?number=${trackingNumber}`
+          };
+          
+          // Update order with tracking info
+          await updateDoc(orderRef, {
+            'shipping.tracking': trackingInfo,
+            'shipping.status': 'shipped'
+          });
+          
+          // Create email payload
+          const emailPayload = {
+            to: user.email,
+            templateName: 'shippingConfirmation',
+            data: {
+              orderId: updatedOrder.id,
+              customerName: `${user.firstName} ${user.lastName}`,
+              trackingNumber: trackingInfo.trackingNumber,
+              carrier: trackingInfo.carrier,
+              estimatedDelivery: trackingInfo.estimatedDelivery,
+              trackingUrl: trackingInfo.trackingUrl,
+              items: updatedOrder.items.map((item: any) => ({
+                name: item.name || 'Product',
+                quantity: item.quantity || 1
+              })),
+              orderUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/account?tab=orders&order=${updatedOrder.id}`
+            }
+          };
+          
+          console.log('Sending email with payload:', JSON.stringify(emailPayload));
+          
+          // Send shipping confirmation email via API
+          try {
+            const response = await fetch('/api/email/send', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(emailPayload),
+            });
+
+            const responseText = await response.text();
+            console.log('API response text:', responseText);
+            
+            const responseData = responseText ? JSON.parse(responseText) : {};
+            
+            if (!response.ok) {
+              console.error('Email API error response:', responseData);
+              throw new Error(`Email API error: ${JSON.stringify(responseData)}`);
+            } else {
+              console.log('Email sent successfully:', responseData);
+            }
+          } catch (emailError) {
+            console.error('Error sending shipping confirmation email:', emailError);
+          }
+        } 
+        else if (newStatus === 'delivered') {
+          // Send delivery confirmation email via API
+          try {
+            // Create email payload with explicit email field
+            const emailPayload = {
+              to: user.email, // Make sure this is set
+              templateName: 'orderDelivered',
+              data: {
+                orderId: updatedOrder.id,
+                customerName: `${user.firstName} ${user.lastName}`,
+                items: updatedOrder.items.map((item: any) => ({
+                  name: item.name || 'Product',
+                  quantity: item.quantity || 1
+                })),
+                orderUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/account?tab=orders&order=${updatedOrder.id}`,
+                reviewUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/review?order=${updatedOrder.id}`
+              }
+            };
+            
+            console.log('Sending delivery email with payload:', JSON.stringify(emailPayload));
+            
+            const response = await fetch('/api/email/send', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(emailPayload),
+            });
+
+            const responseText = await response.text();
+            console.log('API response text:', responseText);
+            
+            const responseData = responseText ? JSON.parse(responseText) : {};
+            
+            if (!response.ok) {
+              console.error('Email API error response:', responseData);
+              throw new Error(`Email API error: ${JSON.stringify(responseData)}`);
+            } else {
+              console.log('Email sent successfully:', responseData);
+            }
+          } catch (emailError) {
+            console.error('Error sending delivery confirmation email:', emailError);
+          }
+        }
+        else if (newStatus === 'cancelled') {
+          // Send cancellation email via API
+          try {
+            await fetch('/api/email/send', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                to: user.email,
+                templateName: 'orderCanceled',
+                data: {
+                  orderId: updatedOrder.id,
+                  customerName: `${user.firstName} ${user.lastName}`,
+                  cancellationReason: 'Order cancelled by administrator',
+                  items: updatedOrder.items.map((item: any) => ({
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: `₦${(item.price * item.quantity).toLocaleString()}`
+                  })),
+                  total: `₦${updatedOrder.amount.toLocaleString()}`,
+                  refundAmount: updatedOrder.payment.status === 'paid' ? `₦${updatedOrder.amount.toLocaleString()}` : 'N/A',
+                  supportEmail: 'support@midessories.com'
+                }
+              }),
+            });
+          } catch (emailError) {
+            console.error('Error sending cancellation email:', emailError);
+          }
+        }
+        else if (newStatus === 'processing') {
+          // Optionally send a processing notification
+          try {
+            await fetch('/api/email/send', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                to: user.email,
+                templateName: 'orderProcessing',
+                data: {
+                  orderId: updatedOrder.id,
+                  customerName: `${user.firstName} ${user.lastName}`,
+                  estimatedShipping: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+                  orderUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/account?tab=orders&order=${updatedOrder.id}`
+                }
+              }),
+            });
+          } catch (emailError) {
+            console.error('Error sending processing email:', emailError);
+          }
+        }
+      }
+
+      // Refresh orders list
+      fetchOrders();
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('Error updating order status');
+    }
+  }
+
   async function handleRefund(orderId: string) {
     if (!refundAmount || !refundReason) return;
     
     try {
+      const amount = parseFloat(refundAmount);
       const refundData: RefundData = {
-        amount: parseFloat(refundAmount),
+        amount,
         reason: refundReason,
         date: new Date()
       };
 
-      await updateDoc(doc(db, 'orders', orderId), {
+      const orderRef = doc(db, 'orders', orderId);
+      
+      // Update the order with refund data
+      await updateDoc(orderRef, {
         'payment.status': 'refunded',
         refund: refundData,
         updatedAt: new Date()
       });
+
+      // If we have a selected order, update it in state and send email
+      if (selectedOrder && selectedOrder.id === orderId) {
+        // Get customer data for email
+        const user = {
+          email: selectedOrder.customerEmail,
+          firstName: selectedOrder.shipping.address.firstName,
+          lastName: selectedOrder.shipping.address.lastName
+        };
+
+        // Send refund confirmation email via API
+        try {
+          const response = await fetch('/api/email/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              to: user.email,
+              templateName: 'refundProcessed',
+              data: {
+                orderId: selectedOrder.id,
+                customerName: `${user.firstName} ${user.lastName}`,
+                refundAmount: `₦${amount.toLocaleString()}`,
+                refundReason: refundReason,
+                date: new Date().toLocaleDateString(),
+                orderUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/account?tab=orders&order=${selectedOrder.id}`
+              }
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Email API error:', errorData);
+          }
+        } catch (emailError) {
+          console.error('Error sending refund email:', emailError);
+        }
+      }
 
       setIsRefunding(false);
       setRefundAmount('');
@@ -174,16 +430,136 @@ export default function OrdersPage() {
     }
   }, [selectedOrder, showMessages]);
 
-  async function updateOrderStatus(orderId: string, status: Order['status']) {
+  async function confirmTransferPayment(orderId: string) {
     try {
-      await updateDoc(doc(db, 'orders', orderId), {
-        status,
+      const orderRef = doc(db, 'orders', orderId);
+      
+      // Update the payment status
+      await updateDoc(orderRef, {
+        'payment.status': 'paid',
         updatedAt: new Date()
       });
+
+      // If we have a selected order, update it in state
+      if (selectedOrder && selectedOrder.id === orderId) {
+        // Create a properly typed updated order
+        const updatedOrder: Order = { 
+          ...selectedOrder, 
+          payment: { 
+            ...selectedOrder.payment, 
+            status: 'paid' as 'pending' | 'failed' | 'paid' | 'refunded'
+          } 
+        };
+        
+        setSelectedOrder(updatedOrder);
+        
+        // Prepare user data for email with fallback
+        const userEmail = updatedOrder.customerEmail || 'missing@email.com';
+        console.log('Customer email for transfer payment confirmation:', userEmail);
+        
+        const user = {
+          email: userEmail,
+          firstName: updatedOrder.shipping.address.firstName || 'Customer',
+          lastName: updatedOrder.shipping.address.lastName || ''
+        };
+
+        // Create email payload
+        const emailPayload = {
+          to: user.email,
+          templateName: 'orderConfirmation',
+          data: {
+            orderId: updatedOrder.id,
+            customerName: `${user.firstName} ${user.lastName}`,
+            date: new Date(updatedOrder.createdAt).toLocaleDateString(),
+            total: `₦${updatedOrder.amount.toLocaleString()}`,
+            items: updatedOrder.items.map((item: any) => ({
+              name: item.name || 'Product',
+              quantity: item.quantity || 1,
+              price: `₦${((item.price || 0) * (item.quantity || 1)).toLocaleString()}`
+            })),
+            shippingAddress: {
+              name: `${updatedOrder.shipping.address.firstName || ''} ${updatedOrder.shipping.address.lastName || ''}`,
+              address: updatedOrder.shipping.address.address || '',
+              city: updatedOrder.shipping.address.city || '',
+              state: updatedOrder.shipping.address.state || ''
+            },
+            orderUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/account?tab=orders&order=${updatedOrder.id}`
+          }
+        };
+
+        console.log('Sending confirmation email with payload:', JSON.stringify(emailPayload));
+
+        // Send payment confirmation email via API
+        try {
+          const response = await fetch('/api/email/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(emailPayload),
+          });
+
+          const responseText = await response.text();
+          console.log('API response text:', responseText);
+          
+          const responseData = responseText ? JSON.parse(responseText) : {};
+          
+          if (!response.ok) {
+            console.error('Email API error response:', responseData);
+            throw new Error(`Email API error: ${JSON.stringify(responseData)}`);
+          } else {
+            console.log('Email sent successfully:', responseData);
+          }
+        } catch (emailError) {
+          console.error('Error sending confirmation email:', emailError);
+        }
+      }
+
+      // Refresh orders list
       fetchOrders();
     } catch (error) {
-      console.error('Error updating order status:', error);
-      alert('Error updating order status');
+      console.error('Error confirming payment:', error);
+      alert('Error confirming payment');
+    }
+  }
+
+  async function checkAndFixMissingEmails() {
+    try {
+      const q = query(collection(db, 'orders'));
+      const snapshot = await getDocs(q);
+      
+      let fixedCount = 0;
+      
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+        
+        if (!data.customerEmail && data.userId) {
+          // Try to get email from user record
+          try {
+            const userDoc = await getDoc(doc(db, 'users', data.userId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              if (userData.email) {
+                // Update the order with the user's email
+                await updateDoc(doc(db, 'orders', docSnap.id), {
+                  customerEmail: userData.email
+                });
+                fixedCount++;
+                console.log(`Fixed missing email for order ${docSnap.id}`);
+              }
+            }
+          } catch (userError) {
+            console.error(`Error getting user data for order ${docSnap.id}:`, userError);
+          }
+        }
+      }
+      
+      console.log(`Fixed ${fixedCount} orders with missing emails`);
+      
+      // Refresh orders list
+      fetchOrders();
+    } catch (error) {
+      console.error('Error checking for missing emails:', error);
     }
   }
 
@@ -343,10 +719,27 @@ export default function OrdersPage() {
               </div>
             </div>
 
+            {selectedOrder && selectedOrder.payment.method === 'transfer' && 
+              selectedOrder.payment.status !== 'paid' && (
+                <button
+                  onClick={() => confirmTransferPayment(selectedOrder.id)}
+                  className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600"
+                >
+                  Confirm Payment
+                </button>
+              )}
+
             {/* I'll continue with the refund modal and messages UI in the next message */}
           </div>
         </div>
       )}
+
+      <button
+        onClick={checkAndFixMissingEmails}
+        className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600"
+      >
+        Fix Missing Emails
+      </button>
     </div>
   );
 } 

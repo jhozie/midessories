@@ -129,35 +129,28 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative min-h-screen bg-gradient-to-br from-white via-pink-50 to-purple-50 pt-40 pb-20 overflow-hidden">
-        {/* Gradient Orbs - slightly larger */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 -right-1/4 w-2/5 h-2/5 bg-gradient-to-br from-pink-200/20 to-purple-300/20 rounded-full blur-3xl" />
-          <div className="absolute -bottom-1/4 -left-1/4 w-2/5 h-2/5 bg-gradient-to-tr from-pink-200/20 to-purple-300/20 rounded-full blur-3xl" />
-        </div>
-
-        {/* Mesh Gradient Background */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,192,203,0.1),rgba(255,255,255,0))]" />
-
+      <section className="relative min-h-screen bg-pink-50 pt-40 pb-20 overflow-hidden">
+        {/* Remove the gradient orbs and mesh gradient background */}
+        
         <div className="container mx-auto px-4 relative">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Left Content */}
             <div className="relative z-10 space-y-8">
-              {/* Sale Badge - adjusted size */}
-              <div className="inline-flex items-center gap-3 bg-white/70 backdrop-blur-xl px-5 py-2.5 rounded-xl shadow-lg shadow-pink-500/10">
-                <span className="text-pink-500 text-base font-medium">Trending Collection</span>
+              {/* Sale Badge - updated without gradient */}
+              <div className="inline-flex items-center gap-3 bg-white px-5 py-2.5 rounded-xl shadow-sm">
+                <span className="text-[#DA0988] text-base font-medium">Trending Collection</span>
                 <div className="w-px h-4 bg-gray-200" />
-                <span className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-3 py-1 rounded-full text-sm">
+                <span className="bg-[#DA0988] text-white px-3 py-1 rounded-full text-sm">
                   New Season
                 </span>
               </div>
 
-              {/* Main Heading - balanced size */}
+              {/* Main Heading - without gradient */}
               <div className="space-y-5">
                 <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
-                  <span className="text-gray-900">Style That</span>
-                  <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-transparent bg-clip-text">
-                    Makes a
+                  <span className="text-gray-900">Make a Statement</span>
+                  <div className="text-[#DA0988]">
+                    with Style
                   </div>
                 </h1>
                 <p className="text-gray-600 text-xl leading-relaxed max-w-lg">
@@ -165,50 +158,50 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* CTA Buttons - adjusted size */}
+              {/* CTA Buttons - updated without gradient */}
               <div className="flex flex-wrap gap-4">
                 <Link 
                   href="/shop" 
-                  className="group inline-flex items-center px-7 py-3.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl 
-                           transition-all duration-300 shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 
-                           hover:scale-105 active:scale-100 text-base"
+                  className="group inline-flex items-center px-7 py-3.5 bg-[#DA0988] text-white rounded-xl 
+                           transition-all duration-300 shadow-md hover:shadow-lg 
+                           hover:bg-[#c0077a] active:scale-98 text-base"
                 >
                   Shop Latest
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link 
                   href="/collections" 
-                  className="inline-flex items-center px-7 py-3.5 bg-white/70 backdrop-blur-xl text-gray-900 
-                           rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl 
-                           hover:bg-white/90 font-medium text-base"
+                  className="inline-flex items-center px-7 py-3.5 bg-white text-gray-900 
+                           rounded-xl transition-all duration-300 shadow-md hover:shadow-lg 
+                           border border-gray-200 hover:border-gray-300 font-medium text-base"
                 >
                   View Collections
                 </Link>
               </div>
 
-              {/* Trust Badges */}
+              {/* Trust Badges - updated without gradient */}
               <div className="grid grid-cols-3 gap-5">
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                   <div className="flex items-center gap-3">
-                    <Star className="w-5 h-5 text-pink-500" />
+                    <Star className="w-5 h-5 text-[#DA0988]" />
                     <div>
                       <p className="font-medium text-gray-900">Trendsetting</p>
                       <p className="text-sm text-gray-500">Designs</p>
                     </div>
                   </div>
                 </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                   <div className="flex items-center gap-3">
-                    <Package className="w-5 h-5 text-pink-500" />
+                    <Package className="w-5 h-5 text-[#DA0988]" />
                     <div>
                       <p className="font-medium text-gray-900">Express</p>
                       <p className="text-sm text-gray-500">Delivery</p>
                     </div>
                   </div>
                 </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                   <div className="flex items-center gap-3">
-                    <Heart className="w-5 h-5 text-pink-500" />
+                    <Heart className="w-5 h-5 text-[#DA0988]" />
                     <div>
                       <p className="font-medium text-gray-900">Exclusive</p>
                       <p className="text-sm text-gray-500">Collection</p>
@@ -218,11 +211,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right Content - Image */}
+            {/* Right Content - Image - updated without gradient */}
             <div className="relative lg:h-[550px] mt-8 lg:mt-0 p-3">
               {/* Main Image Container */}
-              <div className="relative z-10 rounded-2xl overflow-visible shadow-2xl
-                            bg-gradient-to-br from-white/50 to-white/30 backdrop-blur-xl p-2 h-[400px] lg:h-[480px]">
+              <div className="relative z-10 rounded-2xl overflow-visible shadow-lg
+                            bg-white p-2 h-[400px] lg:h-[480px]">
                 <div className="relative h-full rounded-xl overflow-hidden">
                   <Image
                     src="/phonecase.jpg"
@@ -234,35 +227,33 @@ export default function Home() {
                 </div>
 
                 {/* Floating Stats Card */}
-                <div className="absolute -right-3 top-6 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="absolute -right-3 top-6 bg-white rounded-2xl shadow-md border border-gray-100">
                   <div className="flex items-center justify-between gap-3 p-3 min-w-[160px]">
                     <div className="flex flex-col">
                       <p className="text-sm font-medium text-gray-900 whitespace-nowrap">Top Rated</p>
                       <p className="text-xs text-gray-500">This Week</p>
                     </div>
                     <div className="shrink-0">
-                      <TrendingUp className="h-5 w-5 text-pink-500" />
+                      <TrendingUp className="h-5 w-5 text-[#DA0988]" />
                     </div>
                   </div>
                 </div>
 
                 {/* Floating Collection Card */}
-                <div className="absolute -left-3 bottom-6 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="absolute -left-3 bottom-6 bg-white rounded-2xl shadow-md border border-gray-100">
                   <div className="flex items-center justify-between gap-3 p-3 min-w-[160px]">
                     <div className="flex flex-col">
                       <p className="text-sm font-medium text-gray-900 whitespace-nowrap">Featured</p>
                       <p className="text-xs text-gray-500">New Arrivals</p>
                     </div>
                     <div className="shrink-0">
-                      <Sparkles className="h-5 w-5 text-pink-500" />
+                      <Sparkles className="h-5 w-5 text-[#DA0988]" />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Background decoration */}
-              <div className="absolute inset-0 bg-gradient-to-r from-pink-200/20 to-purple-200/20 
-                            rounded-full blur-3xl opacity-70 scale-95 -z-10" />
+              {/* Remove background decoration */}
             </div>
           </div>
         </div>
@@ -332,7 +323,7 @@ export default function Home() {
                       <h3 className="text-base font-medium group-hover:text-pink-500 transition-colors">
                         {product.name}
                       </h3>
-                      <span className="px-2 py-0.5 bg-pink-50 text-pink-500 text-xs font-medium rounded-full">
+                      <span className="px-2 py-0.5 bg-pink-50 text-[#DA0988] text-xs font-medium rounded-full">
                         {product.status === 'active' ? 'New' : product.categoryName || product.category}
                       </span>
                     </div>

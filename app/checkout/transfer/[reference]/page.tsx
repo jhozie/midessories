@@ -3,15 +3,52 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Copy, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { triggerTransferOrderEmail } from '@/lib/emailTriggers';
 
 export default function TransferConfirmationPage({ params }: { params: { reference: string } }) {
   const [copied, setCopied] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  useEffect(() => {
+    async function sendTransferOrderEmail() {
+      try {
+        // Get order data from localStorage
+        const orderDataString = localStorage.getItem('lastOrder');
+        if (!orderDataString) {
+          console.error('No order data found in localStorage');
+          return;
+        }
+        
+        const orderData = JSON.parse(orderDataString);
+        
+        // Get user data from localStorage
+        const userDataString = localStorage.getItem('userData');
+        const userData = userDataString ? JSON.parse(userDataString) : null;
+        
+        // Prepare user object for email
+        const user = {
+          email: orderData.customerEmail,
+          firstName: orderData.shipping.address.firstName,
+          lastName: orderData.shipping.address.lastName,
+          ...userData
+        };
+        
+        // Send transfer order email
+        await triggerTransferOrderEmail(orderData, user);
+        setEmailSent(true);
+      } catch (error) {
+        console.error('Error sending transfer order email:', error);
+      }
+    }
+    
+    sendTransferOrderEmail();
+  }, [params.reference]);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-32 pb-20">
@@ -24,6 +61,11 @@ export default function TransferConfirmationPage({ params }: { params: { referen
               <p className="text-gray-600">
                 Please complete your payment using the bank details below
               </p>
+              {emailSent && (
+                <p className="text-sm text-green-600 mt-2">
+                  We've sent you an email with your order details
+                </p>
+              )}
             </div>
 
             <div className="space-y-6">

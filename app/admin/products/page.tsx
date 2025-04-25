@@ -25,13 +25,16 @@ import {
   doc, 
   updateDoc,
   query,
-  orderBy
+  orderBy,
+  getDoc
 } from 'firebase/firestore';
 import { Product } from '@/types/product';
 import { Category } from '@/types/category';
 import { VariantOption, ProductVariant } from '@/types/product';
 import Link from 'next/link';
 import { generateSlug, formatNaira } from '@/lib/utils';
+import { triggerBackInStockEmail } from '@/lib/emailTriggers';
+import { getBackInStockSubscribers } from '@/lib/productService';
 
 async function uploadToImgBB(file: File) {
   const formData = new FormData();
@@ -383,6 +386,47 @@ export default function ProductsPage() {
 
   function generateSlug(name: string) {
     return name.toLowerCase().replace(/\s+/g, '-').slice(0, 50);
+  }
+
+  async function updateProductInventory(productId, newInventory) {
+    try {
+      const productRef = doc(db, 'products', productId);
+      const productSnap = await getDoc(productRef);
+      const productData = productSnap.data();
+      
+      // Check if product was out of stock but now has inventory
+      if (productData.inventory <= 0 && newInventory > 0) {
+        // Get subscribers who want to be notified
+        const subscribers = await getBackInStockSubscribers(productId);
+        
+        // Send back in stock emails
+        for (const subscriber of subscribers) {
+          await triggerBackInStockEmail(subscriber, {
+            id: productId,
+            name: productData.name,
+            images: productData.images,
+            price: productData.price
+          });
+        }
+        
+        // Clear the notification list
+        await updateDoc(productRef, {
+          'backInStockSubscribers': []
+        });
+      }
+      
+      // Update inventory
+      await updateDoc(productRef, {
+        inventory: newInventory,
+        updatedAt: new Date()
+      });
+      
+      // Refresh products
+      fetchProducts();
+    } catch (error) {
+      console.error('Error updating product inventory:', error);
+      alert('Error updating product inventory');
+    }
   }
 
   return (
