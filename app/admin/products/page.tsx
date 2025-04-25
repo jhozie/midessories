@@ -388,14 +388,20 @@ export default function ProductsPage() {
     return name.toLowerCase().replace(/\s+/g, '-').slice(0, 50);
   }
 
-  async function updateProductInventory(productId, newInventory) {
+  async function updateProductInventory(productId: string, newInventory: number) {
     try {
       const productRef = doc(db, 'products', productId);
       const productSnap = await getDoc(productRef);
+      
+      if (!productSnap.exists()) {
+        console.error('Product not found');
+        return;
+      }
+      
       const productData = productSnap.data();
       
       // Check if product was out of stock but now has inventory
-      if (productData.inventory <= 0 && newInventory > 0) {
+      if (productData && productData.inventory <= 0 && newInventory > 0) {
         // Get subscribers who want to be notified
         const subscribers = await getBackInStockSubscribers(productId);
         

@@ -40,6 +40,14 @@ import { triggerWelcomeEmail } from '@/lib/emailTriggers';
 
 type CustomerTab = 'details' | 'orders' | 'addresses' | 'notes';
 
+// Define an interface for the customer data
+interface CustomerData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+}
+
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +65,12 @@ export default function CustomersPage() {
     tags: [] as string[],
   });
   const [orders, setOrders] = useState<Order[]>([]);
+  const [newCustomerForm, setNewCustomerForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: ''
+  });
 
   useEffect(() => {
     fetchCustomers();
@@ -82,6 +96,7 @@ export default function CustomersPage() {
           updatedAt: data.updatedAt?.toDate() || new Date(),
           totalSpent: data.totalSpent || 0,
           lastPurchase: data.lastPurchase?.toDate() || null,
+          totalOrders: data.totalOrders || 0,
         } as Customer;
       });
       setCustomers(customersData);
@@ -140,7 +155,7 @@ export default function CustomersPage() {
     }
   }
 
-  async function createCustomer(customerData) {
+  async function createCustomer(customerData: CustomerData) {
     try {
       // Create the customer in the users collection
       const docRef = await addDoc(collection(db, 'users'), {
@@ -150,6 +165,7 @@ export default function CustomersPage() {
         addresses: [],
         tags: [],
         totalSpent: 0,
+        totalOrders: 0,
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -182,6 +198,15 @@ export default function CustomersPage() {
     
     return matchesSearch && matchesStatus;
   });
+
+  function resetForm() {
+    setNewCustomerForm({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: ''
+    });
+  }
 
   return (
     <div className="p-6">
