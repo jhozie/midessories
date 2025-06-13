@@ -57,92 +57,75 @@ export default function Header() {
                   <Menu className="h-6 w-6 text-gray-600" />
                 )}
               </button> 
-              <Link href="/" className="text-xl md:text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent flex items-center">
-                {/* You can add a small logo here */}
-                {/* <Image src="/logo.png" alt="Midessories" width={32} height={32} className="mr-2" /> */}
-                MIDESSORIES
-              </Link>
+              <div>
+                <Link href="/">
+                  <Image src="/logo-mide.jpg" alt="Midessories" width={60} height={40} className="rounded-md" />
+                </Link>
+              </div>
               <nav className="hidden lg:flex items-center gap-6">
-                <div 
-                  className="relative group"
-                  onMouseEnter={() => setIsShopDropdownOpen(true)}
-                  onMouseLeave={() => setIsShopDropdownOpen(false)}
-                >
-                  <Link 
-                    href="/shop" 
-                    className={`text-sm font-medium hover:text-pink-500 transition-colors relative py-2 flex items-center gap-1 ${
-                      pathname === '/shop' ? 'text-pink-500' : 'text-gray-700'
-                    }`}
-                  >
-                    SHOP
-                    <ChevronDown className="h-4 w-4" />
-                    {pathname === '/shop' && (
-                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-pink-500 rounded-full"></span>
-                    )}
-                  </Link>
-                  
-                  {/* Shop dropdown */}
-                  {isShopDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl shadow-lg p-4 grid grid-cols-1 gap-2 z-50">
-                      <Link 
-                        href="/shop/all" 
-                        className="px-3 py-2 hover:bg-pink-50 rounded-lg text-gray-700 hover:text-pink-500 transition-colors"
-                      >
-                        All Products
-                      </Link>
-                      <Link 
-                        href="/shop/phone-cases" 
-                        className="px-3 py-2 hover:bg-pink-50 rounded-lg text-gray-700 hover:text-pink-500 transition-colors"
-                      >
-                        Phone Cases
-                      </Link>
-                      <Link 
-                        href="/shop/accessories" 
-                        className="px-3 py-2 hover:bg-pink-50 rounded-lg text-gray-700 hover:text-pink-500 transition-colors"
-                      >
-                        Accessories
-                      </Link>
-                      <div className="border-t border-gray-100 my-2"></div>
-                      <Link 
-                        href="/shop/sale" 
-                        className="px-3 py-2 hover:bg-pink-50 rounded-lg text-pink-500 font-medium"
-                      >
-                        Sale Items
-                      </Link>
-                    </div>
-                  )}
-                </div>
-                
-                <Link 
-                  href="/new" 
+                <Link
+                  href="/shop"
                   className={`text-sm font-medium hover:text-pink-500 transition-colors relative py-2 ${
-                    pathname === '/new' ? 'text-pink-500' : 'text-gray-700'
+                    pathname.startsWith('/shop') ? 'text-pink-500' : 'text-gray-700'
                   }`}
                 >
-                  NEW ARRIVALS
-                  {pathname === '/new' && (
+                  Shop
+                  {pathname.startsWith('/shop') && (
                     <span className="absolute bottom-0 left-0 w-full h-0.5 bg-pink-500 rounded-full"></span>
                   )}
                 </Link>
                 <Link 
-                  href="/collections" 
+                  href="/category/bags" 
                   className={`text-sm font-medium hover:text-pink-500 transition-colors relative py-2 ${
-                    pathname === '/collections' ? 'text-pink-500' : 'text-gray-700'
+                    pathname.startsWith('/category/bags') ? 'text-pink-500' : 'text-gray-700'
                   }`}
                 >
-                  COLLECTIONS
-                  {pathname === '/collections' && (
+                  Bags
+                  {pathname.startsWith('/category/bags') && (
                     <span className="absolute bottom-0 left-0 w-full h-0.5 bg-pink-500 rounded-full"></span>
                   )}
                 </Link>
                 <Link 
-                  href="/about" 
+                  href="/category/sunglasses" 
                   className={`text-sm font-medium hover:text-pink-500 transition-colors relative py-2 ${
-                    pathname === '/about' ? 'text-pink-500' : 'text-gray-700'
+                    pathname.startsWith('/category/sunglasses') ? 'text-pink-500' : 'text-gray-700'
                   }`}
                 >
-                  ABOUT
-                  {pathname === '/about' && (
+                  Sunglasses
+                  {pathname.startsWith('/category/sunglasses') && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-pink-500 rounded-full"></span>
+                  )}
+                </Link>
+                <Link 
+                  href="/category/jewelleries" 
+                  className={`text-sm font-medium hover:text-pink-500 transition-colors relative py-2 ${
+                    pathname.startsWith('/category/jewelleries') ? 'text-pink-500' : 'text-gray-700'
+                  }`}
+                >
+                  Jewelleries
+                  {pathname.startsWith('/category/jewelleries') && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-pink-500 rounded-full"></span>
+                  )}
+                </Link>
+                <Link 
+                  href="/category/hair-accessories" 
+                  className={`text-sm font-medium hover:text-pink-500 transition-colors relative py-2 ${
+                    pathname.startsWith('/category/hair-accessories') ? 'text-pink-500' : 'text-gray-700'
+                  }`}
+                >
+                  Hair Accessories
+                  {pathname.startsWith('/category/hair-accessories') && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-pink-500 rounded-full"></span>
+                  )}
+                </Link>
+                <Link
+                  href="/about"
+                  className={`text-sm font-medium hover:text-pink-500 transition-colors relative py-2 ${
+                    pathname.startsWith('/about') ? 'text-pink-500' : 'text-gray-700'
+                  }`}
+                >
+                  About
+                  {pathname.startsWith('/about') && (
                     <span className="absolute bottom-0 left-0 w-full h-0.5 bg-pink-500 rounded-full"></span>
                   )}
                 </Link>
@@ -198,84 +181,54 @@ export default function Header() {
       } shadow-xl`}>
         <div className="pt-24 px-6 h-full overflow-y-auto">
           <nav className="flex flex-col gap-4">
-            <div className="space-y-2">
-              <Link 
-                href="/shop" 
-                className={`text-lg font-medium p-3 rounded-xl ${
-                  pathname === '/shop' ? 'bg-pink-50 text-pink-500' : 'text-gray-700 hover:bg-gray-50'
-                } transition-colors flex justify-between items-center`}
-              >
-                SHOP
-                <ChevronDown className="h-5 w-5" />
-              </Link>
-              <div className="pl-4 space-y-1">
-                <Link 
-                  href="/shop/all" 
-                  className="block p-2 text-gray-600 hover:text-pink-500 rounded-lg"
-                >
-                  All Products
-                </Link>
-                <Link 
-                  href="/shop/phone-cases" 
-                  className="block p-2 text-gray-600 hover:text-pink-500 rounded-lg"
-                >
-                  Phone Cases
-                </Link>
-                <Link 
-                  href="/shop/accessories" 
-                  className="block p-2 text-gray-600 hover:text-pink-500 rounded-lg"
-                >
-                  Accessories
-                </Link>
-                <Link 
-                  href="/shop/sale" 
-                  className="block p-2 text-pink-500 font-medium rounded-lg"
-                >
-                  Sale Items
-                </Link>
-              </div>
-            </div>
             <Link 
-              href="/new" 
-              className={`text-lg font-medium p-3 rounded-xl ${
-                pathname === '/new' ? 'bg-pink-50 text-pink-500' : 'text-gray-700 hover:bg-gray-50'
-              } transition-colors`}
+              href="/shop"
+              className={`block px-4 py-2 rounded-lg text-lg font-medium transition-colors ${
+                pathname.startsWith('/shop') ? 'bg-pink-50 text-pink-500' : 'hover:bg-gray-50'
+              }`}
             >
-              NEW ARRIVALS
+              Shop
             </Link>
             <Link 
-              href="/collections" 
-              className={`text-lg font-medium p-3 rounded-xl ${
-                pathname === '/collections' ? 'bg-pink-50 text-pink-500' : 'text-gray-700 hover:bg-gray-50'
-              } transition-colors`}
+              href="/category/bags"
+              className={`block px-4 py-2 rounded-lg text-lg font-medium transition-colors ${
+                pathname.startsWith('/category/bags') ? 'bg-pink-50 text-pink-500' : 'hover:bg-gray-50'
+              }`}
             >
-              COLLECTIONS
+              Bags
             </Link>
             <Link 
-              href="/about" 
-              className={`text-lg font-medium p-3 rounded-xl ${
-                pathname === '/about' ? 'bg-pink-50 text-pink-500' : 'text-gray-700 hover:bg-gray-50'
-              } transition-colors`}
+              href="/category/sunglasses"
+              className={`block px-4 py-2 rounded-lg text-lg font-medium transition-colors ${
+                pathname.startsWith('/category/sunglasses') ? 'bg-pink-50 text-pink-500' : 'hover:bg-gray-50'
+              }`}
             >
-              ABOUT
+              Sunglasses
             </Link>
-            <div className="border-t border-gray-100 my-4"></div>
             <Link 
-              href="/account" 
-              className="text-lg font-medium p-3 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-3"
+              href="/category/jewelleries"
+              className={`block px-4 py-2 rounded-lg text-lg font-medium transition-colors ${
+                pathname.startsWith('/category/jewelleries') ? 'bg-pink-50 text-pink-500' : 'hover:bg-gray-50'
+              }`}
             >
-              <User className="h-5 w-5" />
-              My Account
+              Jewelleries
             </Link>
-            <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-              <p className="text-sm text-gray-600 mb-2">Need help?</p>
-              <Link 
-                href="/contact" 
-                className="text-pink-500 font-medium text-sm hover:underline"
-              >
-                Contact Support
-              </Link>
-            </div>
+            <Link 
+              href="/category/hair-accessories"
+              className={`block px-4 py-2 rounded-lg text-lg font-medium transition-colors ${
+                pathname.startsWith('/category/hair-accessories') ? 'bg-pink-50 text-pink-500' : 'hover:bg-gray-50'
+              }`}
+            >
+              Hair Accessories
+            </Link>
+            <Link 
+              href="/about"
+              className={`block px-4 py-2 rounded-lg text-lg font-medium transition-colors ${
+                pathname.startsWith('/about') ? 'bg-pink-50 text-pink-500' : 'hover:bg-gray-50'
+              }`}
+            >
+              About
+            </Link>
           </nav>
         </div>
       </div>

@@ -8,21 +8,9 @@ import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { collection, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove, query, where, orderBy, limit } from 'firebase/firestore';
 import { formatNaira } from '@/lib/utils';
-
-// Add interfaces
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  images: string[];
-  category: string;
-  status: string;
-  ratings: {
-    average: number;
-    count: number;
-  };
-}
+import { Product } from '@/types/product';
+import ProductCard from '@/components/ProductCard';
+import { Loader2 } from 'lucide-react';
 
 export default function NewArrivalsPage() {
   const router = useRouter();
@@ -32,28 +20,53 @@ export default function NewArrivalsPage() {
   const [wishlist, setWishlist] = useState<string[]>([]);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    async function fetchNewArrivals() {
       try {
-        const productsQuery = query(
+        setLoading(true);
+        
+        // Get current date for comparison with newArrivalUntil
+        const now = new Date();
+        console.log('Fetching new arrivals...');
+        
+        // Query for products marked as new arrivals
+        const q = query(
           collection(db, 'products'),
           where('status', '==', 'active'),
-          orderBy('createdAt', 'desc'),
-          limit(12)
+          where('isNewArrival', '==', true),
+          orderBy('createdAt', 'desc')
         );
-        const productsSnapshot = await getDocs(productsQuery);
-        const productsData = productsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Product[];
-        setProducts(productsData);
+        
+        const querySnapshot = await getDocs(q);
+        console.log('Found', querySnapshot.docs.length, 'products');
+        
+        // Filter out products whose newArrivalUntil date has passed
+        const newArrivalsData = querySnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate(),
+            updatedAt: doc.data().updatedAt?.toDate(),
+            newArrivalUntil: doc.data().newArrivalUntil?.toDate()
+          }))
+          .filter((product: any) => {
+            // If newArrivalUntil is set, check if it's in the future
+            if (product.newArrivalUntil) {
+              return product.newArrivalUntil > now;
+            }
+            // If not set, include all products marked as new arrivals
+            return true;
+          }) as Product[];
+        
+        console.log('After filtering:', newArrivalsData.length, 'products');
+        setProducts(newArrivalsData);
       } catch (error) {
-        console.error('Error fetching products:', error);
+        console.error('Error fetching new arrivals:', error);
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchProducts();
+    }
+    
+    fetchNewArrivals();
   }, []);
 
   useEffect(() => {
@@ -156,68 +169,25 @@ export default function NewArrivalsPage() {
         </div>
 
         {/* Product Grid */}
-        <div className={`grid ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1'} gap-6`}>
-          {products.map((product) => (
-            <Link 
-              href={`/product/${product.id}`} 
-              key={product.id} 
-              className={`group bg-white rounded-2xl p-3 hover:shadow-lg transition-shadow ${
-                viewMode === 'list' ? 'flex gap-6' : ''
-              }`}
-            >
-              {/* Product image container */}
-              <div className={`relative ${viewMode === 'list' ? 'w-48 h-48' : 'aspect-square'} rounded-xl overflow-hidden mb-3`}>
-                <Image
-                  src={product.images[0]}
-                  alt={product.name}
-                  fill
-                  className="object-cover transform group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="absolute top-3 left-3">
-                  <span className="bg-pink-500 text-white px-2 py-1 rounded-lg text-xs font-medium">
-                    New
-                  </span>
-                </div>
-                <div className="absolute bottom-3 right-3 flex gap-2">
-                  <button 
-                    onClick={(e) => toggleWishlist(e, product.id)}
-                    className={`bg-white p-2.5 rounded-full shadow-lg translate-y-full opacity-0 
-                              group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 
-                              hover:bg-pink-50 ${wishlist.includes(product.id) ? 'text-pink-500' : 'text-gray-500'}`}
-                  >
-                    <Heart className={`w-4 h-4 ${wishlist.includes(product.id) ? 'fill-pink-500' : ''}`} />
-                  </button>
-                  <button className="bg-white text-black p-2.5 rounded-full shadow-lg translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 delay-75 hover:bg-pink-50">
-                    <ShoppingBag size={16} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Product info */}
-              <div className={`${viewMode === 'list' ? 'flex-1' : ''} space-y-2 px-1`}>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-medium group-hover:text-pink-500 transition-colors">
-                    {product.name}
-                  </h3>
-                </div>
-                <p className="text-gray-500 text-xs">{product.category}</p>
-                <div className="flex items-center justify-between">
-                  <p className="text-base font-semibold">{formatNaira(product.price)}</p>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 text-pink-500 fill-pink-500" />
-                    <span className="text-xs text-gray-600">{product.ratings.average.toFixed(1)}</span>
-                  </div>
-                </div>
-                {viewMode === 'list' && (
-                  <p className="text-gray-600 mt-4">
-                    Experience premium protection with our latest phone case design. 
-                    Featuring a sleek modern aesthetic and military-grade drop protection.
-                  </p>
-                )}
-              </div>
-            </Link>
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {loading ? (
+            <div className="col-span-full flex justify-center items-center h-64">
+              <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+            </div>
+          ) : products.length > 0 ? (
+            products.map((product) => (
+              <ProductCard 
+                key={product.id} 
+                product={product}
+                onWishlistToggle={toggleWishlist}
+                isInWishlist={wishlist.includes(product.id)}
+              />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <p className="text-gray-500">No new arrivals at the moment. Check back soon!</p>
+            </div>
+          )}
         </div>
 
         {/* Replace Load More with Pagination */}

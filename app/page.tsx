@@ -3,16 +3,17 @@
 import { useEffect, useState } from 'react';
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ShoppingBag, Star, Heart, TrendingUp, Package, Sparkles } from "lucide-react";
+import { ArrowRight, ShoppingBag, Star, Heart } from "lucide-react";
 import { getProducts } from '@/lib/firebase';
 import { Product } from '@/types/product';
 import { generateSlug, generateSEOUrl, formatNaira, generateCategorySEOUrl } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, limit } from 'firebase/firestore';
 import { Category } from '@/types/category';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { getDoc, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
+import ProductCard from '@/components/ProductCard';
 
 export default function Home() {
   const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
@@ -25,6 +26,8 @@ export default function Home() {
     count: number;
   }[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
+  const [newArrivals, setNewArrivals] = useState<Product[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -42,7 +45,7 @@ export default function Home() {
     async function fetchCategories() {
       try {
         // Fetch categories from the categories collection
-        const q = query(collection(db, 'categories'), orderBy('order'));
+        const q = query(collection(db, 'categories'), orderBy('order'), limit(4));
         const snapshot = await getDocs(q);
         const categoriesData = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -50,24 +53,26 @@ export default function Home() {
         })) as Category[];
         
         // Fetch products to count items per category
-        const products = await getProducts();
-        const categoryCounts = products.reduce((acc, product) => {
-          acc[product.category] = (acc[product.category] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-        
+      const products = await getProducts();
+      const categoryCounts = products.reduce((acc, product) => {
+        acc[product.category] = (acc[product.category] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
         // Combine category data with counts
         const categoriesWithCounts = categoriesData.map(category => ({
           id: category.id,
           name: category.name,
           description: category.description || '',
-          image: '/phonecase.jpg', // Default image if none is provided
+          image: category.image || '/placeholder.jpg', // Default image if none is provided
           count: categoryCounts[category.id] || 0
         }));
         
         setCategories(categoriesWithCounts);
       } catch (error) {
         console.error('Error fetching categories:', error);
+      } finally {
+        setCategoriesLoading(false);
       }
     }
 
@@ -87,9 +92,47 @@ export default function Home() {
       }
     };
 
+    async function fetchNewArrivals() {
+      try {
+        const now = new Date();
+        const q = query(
+          collection(db, 'products'),
+          where('status', '==', 'active'),
+          where('isNewArrival', '==', true),
+          orderBy('createdAt', 'desc'),
+          limit(4)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate(),
+            updatedAt: doc.data().updatedAt?.toDate(),
+            newArrivalUntil: doc.data().newArrivalUntil?.toDate()
+          }))
+          .filter((product: any) => {
+            if (product.newArrivalUntil) {
+              return product.newArrivalUntil > now;
+            }
+            return true;
+          }) as Product[];
+      } catch (error) {
+        console.error('Error fetching new arrivals:', error);
+        return [];
+      }
+    }
+
+    const loadNewArrivals = async () => {
+      const arrivals = await fetchNewArrivals();
+      setNewArrivals(arrivals);
+    };
+
     fetchTrendingProducts();
     fetchCategories();
     checkWishlist();
+    loadNewArrivals();
   }, []);
 
   // Add toggle wishlist function
@@ -129,149 +172,45 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative min-h-screen bg-pink-50 pt-40 pb-20 overflow-hidden">
-        {/* Remove the gradient orbs and mesh gradient background */}
-        
-        <div className="container mx-auto px-4 relative">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Left Content */}
-            <div className="relative z-10 space-y-8">
-              {/* Sale Badge - updated without gradient */}
-              <div className="inline-flex items-center gap-3 bg-white px-5 py-2.5 rounded-xl shadow-sm">
-                <span className="text-[#DA0988] text-base font-medium">Trending Collection</span>
-                <div className="w-px h-4 bg-gray-200" />
-                <span className="bg-[#DA0988] text-white px-3 py-1 rounded-full text-sm">
-                  New Season
-                </span>
-              </div>
-
-              {/* Main Heading - without gradient */}
-              <div className="space-y-5">
-                <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
-                  <span className="text-gray-900">Make a Statement</span>
-                  <div className="text-[#DA0988]">
-                    with Style
-                  </div>
-                </h1>
-                <p className="text-gray-600 text-xl leading-relaxed max-w-lg">
-                  Express yourself with our exclusive collection of fashion accessories. Each piece tells a unique story.
-                </p>
-              </div>
-
-              {/* CTA Buttons - updated without gradient */}
-              <div className="flex flex-wrap gap-4">
-                <Link 
-                  href="/shop" 
-                  className="group inline-flex items-center px-7 py-3.5 bg-[#DA0988] text-white rounded-xl 
-                           transition-all duration-300 shadow-md hover:shadow-lg 
-                           hover:bg-[#c0077a] active:scale-98 text-base"
-                >
-                  Shop Latest
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link 
-                  href="/collections" 
-                  className="inline-flex items-center px-7 py-3.5 bg-white text-gray-900 
-                           rounded-xl transition-all duration-300 shadow-md hover:shadow-lg 
-                           border border-gray-200 hover:border-gray-300 font-medium text-base"
-                >
-                  View Collections
-                </Link>
-              </div>
-
-              {/* Trust Badges - updated without gradient */}
-              <div className="grid grid-cols-3 gap-5">
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <Star className="w-5 h-5 text-[#DA0988]" />
-                    <div>
-                      <p className="font-medium text-gray-900">Trendsetting</p>
-                      <p className="text-sm text-gray-500">Designs</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <Package className="w-5 h-5 text-[#DA0988]" />
-                    <div>
-                      <p className="font-medium text-gray-900">Express</p>
-                      <p className="text-sm text-gray-500">Delivery</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <Heart className="w-5 h-5 text-[#DA0988]" />
-                    <div>
-                      <p className="font-medium text-gray-900">Exclusive</p>
-                      <p className="text-sm text-gray-500">Collection</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Content - Image - updated without gradient */}
-            <div className="relative lg:h-[550px] mt-8 lg:mt-0 p-3">
-              {/* Main Image Container */}
-              <div className="relative z-10 rounded-2xl overflow-visible shadow-lg
-                            bg-white p-2 h-[400px] lg:h-[480px]">
-                <div className="relative h-full rounded-xl overflow-hidden">
-                  <Image
-                    src="/phonecase.jpg"
-                    alt="Fashion Accessories Collection"
-                    fill
-                    className="object-cover hover:scale-105 transition-transform duration-700"
-                    priority
-                  />
-                </div>
-
-                {/* Floating Stats Card */}
-                <div className="absolute -right-3 top-6 bg-white rounded-2xl shadow-md border border-gray-100">
-                  <div className="flex items-center justify-between gap-3 p-3 min-w-[160px]">
-                    <div className="flex flex-col">
-                      <p className="text-sm font-medium text-gray-900 whitespace-nowrap">Top Rated</p>
-                      <p className="text-xs text-gray-500">This Week</p>
-                    </div>
-                    <div className="shrink-0">
-                      <TrendingUp className="h-5 w-5 text-[#DA0988]" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating Collection Card */}
-                <div className="absolute -left-3 bottom-6 bg-white rounded-2xl shadow-md border border-gray-100">
-                  <div className="flex items-center justify-between gap-3 p-3 min-w-[160px]">
-                    <div className="flex flex-col">
-                      <p className="text-sm font-medium text-gray-900 whitespace-nowrap">Featured</p>
-                      <p className="text-xs text-gray-500">New Arrivals</p>
-                    </div>
-                    <div className="shrink-0">
-                      <Sparkles className="h-5 w-5 text-[#DA0988]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Remove background decoration */}
-            </div>
-          </div>
+      <section className="relative h-[90vh] md:h-screen flex items-center justify-center text-center text-white">
+        <div className="absolute inset-0">
+          <Image
+            src="/background.jpg"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-black/50" />
+        </div>
+        <div className="relative z-10 px-4 container mx-auto">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-4 leading-tight">
+            Your Style, Your Story
+          </h1>
+          <p className="text-md md:text-lg max-w-2xl mx-auto mb-8 text-gray-200">
+            Discover our new collection of accessories and essentials.
+          </p>
+          <Link
+            href="/shop"
+            className="px-6 py-3 md:px-8 md:py-4 bg-white text-black rounded-full font-semibold hover:bg-gray-200 transition-colors"
+          >
+            Shop Now
+          </Link>
         </div>
       </section>
-
-      {/* Trending Products section */}
-      <section className="py-24">
+  {/* Featured Products section */}
+  <section className="py-24">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-12">
             <div>
-              <h2 className="text-3xl font-bold mb-2">Trending Products</h2>
+              <h2 className="text-3xl font-bold mb-2">Featured Products</h2>
               <p className="text-gray-600">Our most popular products based on sales</p>
             </div>
             <Link href="/shop" className="flex items-center gap-2 text-pink-500 font-medium hover:text-pink-600 transition-colors">
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {loading ? (
               // Loading skeletons remain the same
@@ -312,8 +251,8 @@ export default function Home() {
                                  group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 delay-75
                                  hover:bg-pink-50"
                       >
-                        <ShoppingBag size={16} />
-                      </button>
+                      <ShoppingBag size={16} />
+                    </button>
                     </div>
                   </div>
                   
@@ -323,9 +262,9 @@ export default function Home() {
                       <h3 className="text-base font-medium group-hover:text-pink-500 transition-colors">
                         {product.name}
                       </h3>
-                      <span className="px-2 py-0.5 bg-pink-50 text-[#DA0988] text-xs font-medium rounded-full">
+                      {/* <span className="px-2 py-0.5 bg-pink-50 text-[#DA0988] text-xs font-medium rounded-full">
                         {product.status === 'active' ? 'New' : product.categoryName || product.category}
-                      </span>
+                        </span> */}
                     </div>
                     <p className="text-gray-500 text-xs">{product.description?.substring(0, 60)}...</p>
                     <div className="flex items-center justify-between">
@@ -344,6 +283,58 @@ export default function Home() {
           </div>
         </div>
       </section>
+      {/* New Arrivals Section */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">New Arrivals</h2>
+              <p className="text-gray-600">Check out our latest products</p>
+            </div>
+            <Link 
+              href="/new" 
+              className="flex items-center gap-2 text-pink-500 hover:text-pink-600 font-medium"
+            >
+              View All
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {loading ? (
+              // Loading skeletons
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="bg-gray-200 rounded-2xl aspect-square mb-4" />
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-200 rounded w-3/4" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2" />
+                    <div className="flex justify-between">
+                      <div className="h-4 bg-gray-200 rounded w-1/4" />
+                      <div className="h-4 bg-gray-200 rounded w-1/4" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : newArrivals.length > 0 ? (
+              newArrivals.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onWishlistToggle={toggleWishlist}
+                  isInWishlist={wishlist.includes(product.id)}
+                />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-500">No new arrivals at the moment. Check back soon!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+    
 
       {/* Categories */}
       <section className="py-24 bg-gray-50">
@@ -353,27 +344,35 @@ export default function Home() {
             Explore our wide range of categories, each carefully curated to match your unique style
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {categories.map((category) => (
-              <Link 
-                key={category.id}
-                href={`/category/${category.name.toLowerCase().replace(/\s+/g, '-')}`}
-                className="group relative overflow-hidden rounded-2xl"
-              >
-                <div className="aspect-square relative">
-                  <Image
-                    src={category.image}
-                    alt={category.name}
-                    fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute inset-0 flex flex-col justify-end p-6">
-                    <h3 className="text-white text-xl font-medium mb-1">{category.name}</h3>
-                    <p className="text-white/80 text-sm">{category.count}+ Products</p>
-                  </div>
+            {categoriesLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="bg-gray-200 rounded-2xl aspect-square" />
                 </div>
-              </Link>
-            ))}
+              ))
+            ) : (
+              categories.map((category) => (
+                <Link 
+                  key={category.id}
+                  href={`/category/${category.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  className="group relative overflow-hidden rounded-2xl"
+                >
+                  <div className="aspect-square relative">
+                    <Image
+                      src={category.image}
+                      alt={category.name}
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute inset-0 flex flex-col justify-end p-6">
+                      <h3 className="text-white text-xl font-medium mb-1">{category.name}</h3>
+                      <p className="text-white/80 text-sm">{category.count}+ Products</p>
+                    </div>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </section>

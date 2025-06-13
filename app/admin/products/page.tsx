@@ -74,6 +74,8 @@ export default function ProductsPage() {
     specifications: {} as { [key: string]: string },
     status: 'draft' as 'active' | 'draft' | 'archived',
     featured: false,
+    isNewArrival: false,
+    newArrivalUntil: '',
     variantOptions: [] as VariantOption[],
     variants: [] as ProductVariant[],
     seo: {
@@ -99,12 +101,16 @@ export default function ProductsPage() {
   const [quickCategoryForm, setQuickCategoryForm] = useState({
     name: '',
     description: '',
+    image: '',
   });
   const [bulkEdit, setBulkEdit] = useState({
     price: '',
     stock: '',
     applyToAll: false
   });
+  const [categoryImageFile, setCategoryImageFile] = useState<File | null>(null);
+  const [categoryImagePreview, setCategoryImagePreview] = useState('');
+  const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -148,37 +154,57 @@ export default function ProductsPage() {
     setUploading(true);
 
     try {
-      const imageUrls = await Promise.all(
-        imageFiles.map(file => uploadToImgBB(file))
-      );
-
-      const selectedCategory = categories.find(cat => cat.id === formData.category);
-      const categoryName = selectedCategory ? selectedCategory.name : '';
-
+      // Upload images if there are any new ones
+      let uploadedImages = [...formData.images];
+      
+      if (imageFiles.length > 0) {
+        for (const file of imageFiles) {
+          const imageUrl = await uploadToImgBB(file);
+          uploadedImages.push(imageUrl);
+        }
+      }
+      
+      // Prepare product data
       const productData = {
-        ...formData,
-        price: parseFloat(formData.price),
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price) || 0,
         compareAtPrice: formData.compareAtPrice ? parseFloat(formData.compareAtPrice) : null,
-        images: selectedProduct ? 
-          [...formData.images, ...imageUrls] :
-          imageUrls,
-        ...((!formData.hasVariants && {
-          stock: parseInt(formData.stock),
-          sku: formData.sku,
-        }) || {}),
-        categoryName: categoryName,
-        shipping: {
-          ...formData.shipping,
-          weight: parseFloat(formData.shipping.weight),
-          dimensions: {
-            length: parseFloat(formData.shipping.dimensions.length),
-            width: parseFloat(formData.shipping.dimensions.width),
-            height: parseFloat(formData.shipping.dimensions.height),
-          }
+        category: formData.category,
+        subcategory: formData.subcategory || '',
+        images: uploadedImages,
+        stock: parseInt(formData.stock) || 0,
+        sku: formData.sku,
+        barcode: formData.barcode || '',
+        brand: formData.brand || '',
+        tags: formData.tags,
+        specifications: formData.specifications,
+        status: formData.status,
+        featured: formData.featured,
+        isNewArrival: formData.isNewArrival,
+        newArrivalUntil: formData.newArrivalUntil ? new Date(formData.newArrivalUntil) : null,
+        hasVariants: formData.hasVariants,
+        variantOptions: formData.hasVariants ? formData.variantOptions : [],
+        variants: formData.hasVariants ? formData.variants : [],
+        ratings: {
+          average: 0,
+          count: 0
         },
-        ratings: selectedProduct?.ratings || { average: 0, count: 0 },
-        createdAt: selectedProduct?.createdAt || new Date(),
-        updatedAt: new Date(),
+        seo: {
+          title: formData.seo.title || formData.name,
+          description: formData.seo.description || formData.description.substring(0, 160),
+          keywords: formData.seo.keywords
+        },
+        shipping: {
+          weight: parseFloat(formData.shipping.weight) || 0,
+          dimensions: {
+            length: parseFloat(formData.shipping.dimensions.length) || 0,
+            width: parseFloat(formData.shipping.dimensions.width) || 0,
+            height: parseFloat(formData.shipping.dimensions.height) || 0
+          },
+          freeShipping: formData.shipping.freeShipping
+        },
+        updatedAt: new Date()
       };
 
       if (selectedProduct) {
@@ -193,7 +219,7 @@ export default function ProductsPage() {
       fetchProducts();
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('Error uploading images or saving product');
+      alert('Error saving product: ' + (error as Error).message);
     } finally {
       setUploading(false);
     }
@@ -216,6 +242,8 @@ export default function ProductsPage() {
       specifications: {},
       status: 'draft',
       featured: false,
+      isNewArrival: false,
+      newArrivalUntil: '',
       variantOptions: [],
       variants: [],
       seo: {
@@ -250,7 +278,13 @@ export default function ProductsPage() {
 
   function handleEdit(product: Product) {
     setSelectedProduct(product);
+    setProductFormData(product);
+    setIsModalOpen(true);
+  }
+
+  function setProductFormData(product: Product) {
     setFormData({
+      ...formData,
       name: product.name,
       description: product.description,
       price: product.price.toString(),
@@ -266,6 +300,10 @@ export default function ProductsPage() {
       specifications: product.specifications || {},
       status: product.status || 'draft',
       featured: product.featured || false,
+      isNewArrival: product.isNewArrival || false,
+      newArrivalUntil: product.newArrivalUntil instanceof Date 
+        ? product.newArrivalUntil.toISOString().split('T')[0]
+        : product.newArrivalUntil?.toDate?.()?.toISOString?.().split('T')[0] || '',
       variantOptions: product.variantOptions || [],
       variants: product.variants || [],
       seo: {
@@ -284,7 +322,6 @@ export default function ProductsPage() {
       },
       hasVariants: product.hasVariants,
     });
-    setIsModalOpen(true);
   }
 
   function generateVariantCombinations() {
@@ -322,34 +359,54 @@ export default function ProductsPage() {
     );
   }
 
+  const handleCategoryImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCategoryImageFile(file);
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setCategoryImagePreview(previewUrl);
+    }
+  };
+
   async function handleQuickCategoryCreate(e: React.FormEvent) {
     e.preventDefault();
+    setUploadingCategoryImage(true);
+
     try {
-      const categoryData: Omit<Category, 'id'> = {
+      let imageUrl = '/placeholder.jpg';
+
+      // Upload image if selected
+      if (categoryImageFile) {
+        imageUrl = await uploadToImgBB(categoryImageFile);
+      }
+
+      const categoryRef = await addDoc(collection(db, 'categories'), {
         name: quickCategoryForm.name,
-        slug: quickCategoryForm.name.toLowerCase().replace(/\s+/g, '-'),
-        description: quickCategoryForm.description || '',
-        image: '',
-        parentId: null,
-        order: categories.length,
+        description: quickCategoryForm.description,
+        image: imageUrl,
+        order: 0,
         createdAt: new Date(),
         updatedAt: new Date()
-      };
+      });
 
-      const docRef = await addDoc(collection(db, 'categories'), categoryData);
+      // Refresh categories
+      fetchCategories();
       
-      const newCategory = { 
-        id: docRef.id, 
-        ...categoryData 
-      };
-      
-      setCategories([...categories, newCategory]);
-      setFormData({ ...formData, category: docRef.id });
-      setQuickCategoryForm({ name: '', description: '' });
+      // Reset form and states
       setIsQuickCategoryModalOpen(false);
+      setQuickCategoryForm({
+        name: '',
+        description: '',
+        image: ''
+      });
+      setCategoryImageFile(null);
+      setCategoryImagePreview('');
     } catch (error) {
       console.error('Error creating category:', error);
-      alert('Error creating category: ' + (error as Error).message);
+      alert('Error creating category');
+    } finally {
+      setUploadingCategoryImage(false);
     }
   }
 
@@ -788,87 +845,82 @@ export default function ProductsPage() {
                     />
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="featured"
-                        checked={formData.featured}
-                        onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
-                        className="rounded text-pink-500 focus:ring-pink-500"
-                      />
-                      <label htmlFor="featured" className="text-sm text-gray-700">
-                        Featured Product
-                      </label>
-                    </div>
-                    <div>
-                      <select
-                        value={formData.status}
-                        onChange={(e) => setFormData({ 
-                          ...formData, 
-                          status: e.target.value as 'active' | 'draft' | 'archived' 
-                        })}
-                        className="px-4 py-2 rounded-xl border border-gray-200 focus:border-pink-500 outline-none"
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="active">Active</option>
-                        <option value="archived">Archived</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="hasVariants"
-                        checked={formData.hasVariants}
-                        onChange={(e) => {
-                          setFormData({ 
-                            ...formData, 
-                            hasVariants: e.target.checked,
-                            ...((!e.target.checked && {
-                              variantOptions: [],
-                              variants: [],
-                            }) || {})
-                          });
-                        }}
-                        className="rounded text-pink-500 focus:ring-pink-500"
-                      />
-                      <label htmlFor="hasVariants" className="text-sm text-gray-700">
-                        This product has multiple variants
-                      </label>
-                    </div>
-                  </div>
-
-                  {!formData.hasVariants && (
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          SKU
+                          Status
                         </label>
-                        <input
-                          type="text"
-                          value={formData.sku}
-                          onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                        <select
+                          value={formData.status}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            status: e.target.value as 'active' | 'draft' | 'archived'
+                          })}
                           className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-pink-500 outline-none"
-                          required
-                        />
+                        >
+                          <option value="active">Active</option>
+                          <option value="draft">Draft</option>
+                          <option value="archived">Archived</option>
+                        </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Stock
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.stock}
-                          onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                          className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-pink-500 outline-none"
-                          required
-                        />
+                      
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="featured"
+                            checked={formData.featured}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              featured: e.target.checked
+                            })}
+                            className="h-4 w-4 text-pink-500 focus:ring-pink-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor="featured" className="ml-2 block text-sm text-gray-700">
+                            Featured Product
+                          </label>
+                        </div>
+                        
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="isNewArrival"
+                            checked={formData.isNewArrival}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              isNewArrival: e.target.checked
+                            })}
+                            className="h-4 w-4 text-pink-500 focus:ring-pink-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor="isNewArrival" className="ml-2 block text-sm text-gray-700">
+                            Mark as New Arrival
+                          </label>
+                        </div>
                       </div>
                     </div>
-                  )}
+                    
+                    {formData.isNewArrival && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          New Arrival Until (optional)
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.newArrivalUntil}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            newArrivalUntil: e.target.value
+                          })}
+                          min={new Date().toISOString().split('T')[0]}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-pink-500 outline-none"
+                        />
+                        <p className="mt-1 text-sm text-gray-500">
+                          If set, the product will automatically stop being a new arrival after this date.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
 
@@ -1372,9 +1424,9 @@ export default function ProductsPage() {
 
       {/* Quick Category Modal */}
       {isQuickCategoryModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-2xl w-full max-w-md">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-md my-8">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
               <h2 className="text-xl font-bold">Add New Category</h2>
               <button
                 onClick={() => setIsQuickCategoryModalOpen(false)}
@@ -1383,43 +1435,94 @@ export default function ProductsPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleQuickCategoryCreate} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category Name
-                </label>
-                <input
-                  type="text"
-                  value={quickCategoryForm.name}
-                  onChange={(e) => setQuickCategoryForm({
-                    ...quickCategoryForm,
-                    name: e.target.value
-                  })}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-pink-500 outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description (Optional)
-                </label>
-                <textarea
-                  value={quickCategoryForm.description}
-                  onChange={(e) => setQuickCategoryForm({
-                    ...quickCategoryForm,
-                    description: e.target.value
-                  })}
-                  className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-pink-500 outline-none"
-                  rows={3}
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-pink-500 text-white py-2 rounded-xl hover:bg-pink-600 transition-colors"
-              >
-                Create Category
-              </button>
-            </form>
+            <div className="p-6 max-h-[calc(100vh-8rem)] overflow-y-auto">
+              <form onSubmit={handleQuickCategoryCreate} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category Name
+                  </label>
+                  <input
+                    type="text"
+                    value={quickCategoryForm.name}
+                    onChange={(e) => setQuickCategoryForm({
+                      ...quickCategoryForm,
+                      name: e.target.value
+                    })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-pink-500 outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category Image
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCategoryImageChange}
+                      className="hidden"
+                      id="categoryImage"
+                    />
+                    <label
+                      htmlFor="categoryImage"
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl cursor-pointer transition-colors flex items-center gap-2"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Choose Image
+                    </label>
+                    {categoryImageFile && (
+                      <span className="text-sm text-gray-600">
+                        {categoryImageFile.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Image Preview */}
+                {categoryImagePreview && (
+                  <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+                    <Image
+                      src={categoryImagePreview}
+                      alt="Category preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description (Optional)
+                  </label>
+                  <textarea
+                    value={quickCategoryForm.description}
+                    onChange={(e) => setQuickCategoryForm({
+                      ...quickCategoryForm,
+                      description: e.target.value
+                    })}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-pink-500 outline-none"
+                    rows={3}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={uploadingCategoryImage}
+                  className="w-full bg-pink-500 text-white py-2 rounded-xl hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {uploadingCategoryImage ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    'Create Category'
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       )}

@@ -21,6 +21,8 @@ export interface Product {
   variants?: ProductVariant[];
   status: 'active' | 'draft' | 'archived';
   featured: boolean;
+  isNewArrival: boolean;
+  newArrivalUntil?: Date;
   ratings: {
     average: number;
     count: number;

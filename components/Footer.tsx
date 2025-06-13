@@ -1,16 +1,19 @@
 import Link from 'next/link';
 import { Instagram, Facebook, Twitter } from 'lucide-react';
-
+import Image from 'next/image';
 export default function Footer() {
   return (
     <footer className="bg-white border-t border-gray-100">
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           <div>
-            <h3 className="font-bold text-xl bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent mb-6">
-              MIDESSORIES
-            </h3>
-            <p className="text-gray-600 text-sm">
+          <div>
+                <Link href="/">
+                  <Image src="/logo-mide.jpg" alt="Midessories" width={60} height={40} className="rounded-md" />
+                </Link>
+              </div>
+              
+            <p className="text-gray-600 text-sm pt-4">
               Elevating your style with modern accessories. Quality products that make a statement in 2025 and beyond.
             </p>
             <div className="flex gap-4 mt-6">
@@ -29,10 +32,10 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold mb-6">Quick Links</h3>
             <ul className="space-y-3">
-              <li><Link href="/shop" className="text-gray-600 hover:text-pink-500 transition-colors">Shop</Link></li>
-              <li><Link href="/new-arrivals" className="text-gray-600 hover:text-pink-500 transition-colors">New Arrivals</Link></li>
-              <li><Link href="/collections" className="text-gray-600 hover:text-pink-500 transition-colors">Collections</Link></li>
-              <li><Link href="/about" className="text-gray-600 hover:text-pink-500 transition-colors">About</Link></li>
+              <li><Link href="/shop" className="text-gray-600 hover:text-pink-500 transition-colors">Shop</Link></li>     
+              <li><Link href="/category/bags" className="text-gray-600 hover:text-pink-500 transition-colors">Bags</Link></li>
+              <li><Link href="/category/jewelleries" className="text-gray-600 hover:text-pink-500 transition-colors">Jewelleries</Link></li>
+              <li><Link href="/category/hair-accessories" className="text-gray-600 hover:text-pink-500 transition-colors">Hair Accessories</Link></li>
             </ul>
           </div>
 
