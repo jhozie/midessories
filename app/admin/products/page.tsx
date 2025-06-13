@@ -125,7 +125,8 @@ export default function ProductsPage() {
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate()
+        updatedAt: doc.data().updatedAt?.toDate(),
+        newArrivalUntil: doc.data().newArrivalUntil?.toDate()
       })) as Product[];
       setProducts(productsData);
     } catch (error) {
@@ -301,9 +302,7 @@ export default function ProductsPage() {
       status: product.status || 'draft',
       featured: product.featured || false,
       isNewArrival: product.isNewArrival || false,
-      newArrivalUntil: product.newArrivalUntil instanceof Date 
-        ? product.newArrivalUntil.toISOString().split('T')[0]
-        : product.newArrivalUntil?.toDate?.()?.toISOString?.().split('T')[0] || '',
+      newArrivalUntil: product.newArrivalUntil ? (product.newArrivalUntil as Date).toISOString().split('T')[0] : '',
       variantOptions: product.variantOptions || [],
       variants: product.variants || [],
       seo: {
